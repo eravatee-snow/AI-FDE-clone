@@ -319,7 +319,7 @@ def _(mo):
     everything connected, so the network is fine. In one to three sentences,
     explain what the issuer column predicts that the status column cannot.
 
-    **Answer:**
+    **Answer:** The issuer column can reveal a corporate TLS-inspecting proxy that decrypts and re-signs connections; a successful status only shows that this machine completed the TLS handshake. This predicts possible CERTIFICATE_VERIFY_FAILED errors in containers or other tools that lack the corporate root CA, even though the connection works on your laptop.
     """)
     return
 
@@ -333,7 +333,7 @@ def _(mo):
     cell. Explain how both of those can be true at once, and what that tells you
     about what a byte-comparison gate is actually able to promise.
 
-    **Answer:**
+    **Answer:** make check verifies that the committed .ipynb matches what is generated from the .py; it does not execute the notebook’s cells. A byte-comparison gate promises consistency between source and generated output, not working code
     """)
     return
 
@@ -518,7 +518,7 @@ def _(mo):
     costs one line in `.env` here — and what specifically you would have had to
     rewrite if the code had called a vendor SDK directly.
 
-    **Answer:**
+    **Answer:** Here, LiteLLM keeps provider routing in configuration, so an approved, compatible gateway can be selected through .env without changing the model-call code; depending on the gateway, its URL and credentials may also need updating. With a vendor SDK used directly, switching to an incompatible gateway could require rewriting client initialization, API calls, and provider-specific response and streaming handling rather than just configuration.
     """)
     return
 
@@ -533,7 +533,7 @@ def _(mo):
     that specific outcome tell you about the rule you wrote — and why is
     `/clear` a better test than simply continuing the conversation?
 
-    **Answer:**
+    **Answer:** It suggests the agent was relying on reminders or examples in the conversation rather than the saved rule alone—the rule may be too vague, though you should also verify that the correct CLAUDE.md was saved and loaded. /clear removes that conversational support, making it a better test of whether the persistent instruction is clear and sufficient on its own.
     """)
     return
 
