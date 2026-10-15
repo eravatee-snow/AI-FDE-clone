@@ -1131,3 +1131,4 @@ challenge, which carries the full detail.
 
 Everything after this week assumes your app has a contract, a bar, a place to
 live, and someone specific waiting for it.
+
