@@ -1,0 +1,60 @@
+{
+  "_comment": "Approved toil taxonomy for ToilMap. Only human-approved categories live here, and every change is a reviewed commit, so git history is the audit trail. Model-proposed categories are pending and kept in a separate working store until a reviewer approves, renames, or rejects them.",
+  "categories": [
+    {
+      "name": "hardware_failure",
+      "label": "Hardware Failure",
+      "description": "A physical network component fails: chassis, line card, power supply, fan, optic/SFP, transceiver degradation. Remediated by replacing or RMA'ing the part."
+    },
+    {
+      "name": "link_circuit_carrier",
+      "label": "Link / Circuit / Carrier",
+      "description": "Physical-layer or carrier-level connectivity issue: fiber cut, flapping interface, last-mile carrier outage. Remediation often involves the carrier, not just internal teams."
+    },
+    {
+      "name": "routing_bgp",
+      "label": "Routing / BGP",
+      "description": "Routing-layer issue: flapping BGP sessions, route leaks, misconfigured peers, route table exhaustion, route hijacks."
+    },
+    {
+      "name": "change_induced_errors",
+      "label": "Change-Induced Errors",
+      "description": "An incident traced to a change that was made or executed incorrectly -- a bad config push, an ACL/VLAN error, a missed runbook step, or a process gap during a change. Merges what would otherwise be two overlapping buckets (bad change content vs. bad change process)."
+    },
+    {
+      "name": "capacity_congestion",
+      "label": "Capacity / Congestion",
+      "description": "Bandwidth saturation, buffer overflow, QoS starvation, or a link/device undersized for current traffic."
+    },
+    {
+      "name": "dns",
+      "label": "DNS",
+      "description": "DNS resolution failures, propagation delay, or misconfigured records."
+    },
+    {
+      "name": "power_environmental",
+      "label": "Power / Environmental",
+      "description": "Facility-level event: UPS failure, cooling/HVAC event, data-center power loss. Tracked separately from hardware_failure because the blast radius and owning team (facilities/DC ops) differ."
+    },
+    {
+      "name": "security",
+      "label": "Security",
+      "description": "DDoS, unauthorized access attempt, or malware with network-visible symptoms."
+    },
+    {
+      "name": "software_firmware_bug",
+      "label": "Software / Firmware Bug",
+      "description": "A known or newly discovered vendor defect, memory leak, or OS-level bug requiring a patch or workaround."
+    },
+    {
+      "name": "third_party_upstream",
+      "label": "Third-Party / Upstream Dependency",
+      "description": "An outage or degradation in an upstream provider, peering partner, or external dependency outside the team's direct control."
+    }
+  ],
+  "non_toil": {
+    "name": "not_toil",
+    "label": "Not Toil",
+    "description": "A confident judgement that the incident is a genuine one-off with no recurring pattern, so it belongs in no toil category. Distinct from a null category, which means the model could not decide and a human must review."
+  }
+}
