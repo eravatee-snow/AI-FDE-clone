@@ -18,37 +18,39 @@ put real hostnames, IPs, or architecture diagrams in this file.
 
 **Who did you ask?** (role, not name)
 
-<!-- your answer here -->
+Principal Software Engineer of my team
 
 | # | Question | Answer |
 | :---: | --- | --- |
-| 1 | Where do internal apps run? (k8s, ECS, App Service, a VM someone maintains) | <!-- --> |
-| 2 | Which cloud? AWS, Azure, GCP, on-prem, several? | <!-- --> |
-| 3 | Is there an internal container registry? | <!-- --> |
-| 4 | How do users log in? (Okta, Entra ID, Ping, SAML, homegrown) | <!-- --> |
-| 5 | Can the app reach the internet? Egress proxy? Allowlist? | <!-- --> |
-| 6 | Where do secrets come from? (Vault, Secrets Manager, Key Vault) | <!-- --> |
-| 7 | Who approves a deployment, and what review does it need? | <!-- --> |
-| 8 | Is there an approved internal LLM endpoint already? | <!-- --> |
+| 1 | Where do internal apps run? (k8s, ECS, App Service, a VM someone maintains) | k8s |
+| 2 | Which cloud? AWS, Azure, GCP, on-prem, several? | on-prem |
+| 3 | Is there an internal container registry? | yes |
+| 4 | How do users log in? (Okta, Entra ID, Ping, SAML, homegrown) | homegrown, SAML based LDAP or OAuth based LDAP |
+| 5 | Can the app reach the internet? Egress proxy? Allowlist? | yes |
+| 6 | Where do secrets come from? (Vault, Secrets Manager, Key Vault) | key vault, called snccredential |
+| 7 | Who approves a deployment, and what review does it need? | There is a comprehensive process in place, where a team of architects will decide based on my proposal is sound enough, if I have architected all aspects of this solution correctly. They might suggest changes to the solution, or request additional information. But, I can deploy to the lab environement wihout any restrictions, that is where I will be starting my development. |
+| 8 | Is there an approved internal LLM endpoint already? | no, for now, I am using a local LLM model. |
 
 **What surprised you?**
 
-<!-- your answer here -->
+I knew all the details, I have had these conversations with my team.
 
 **What would you have to change about your app to deploy there?**
 
-<!-- your answer here -->
-
+I do not know fully, but after testing things out in the lab environment, I will make changes as needed.
 ---
 
 ## Week 1 — what your machine told you
+Date: 2025-10-16
+host	why	status	signed by
+pypi.org	Python packages	OK	GlobalSign nv-sa
+files.pythonhosted.org	the actual wheel downloads	OK	GlobalSign nv-sa
+api.openai.com	the model API	OK	Google Trust Services
+cdn.jsdelivr.net	the CDN your app's frontend uses	OK	Sectigo Limited
+huggingface.co	open weights and fine-tuning	OK	Amazon
+registry-1.docker.io	container images	OK	Amazon
+github.com	this repository	OK	Sectigo Limited
 
-<!--
-  Paste the egress probe output from Session 1 here. It is evidence, and it
-  frequently disagrees with what people believe about their own network.
--->
-
-<!-- probe output here -->
 
 **Does this match what you were told in the table above?** Where it doesn't, that
 gap is worth chasing — it usually means a proxy nobody documented.
