@@ -1,4 +1,4 @@
-.PHONY: help setup setup-local setup-harness setup-week setup-all env mirrors check execute nb guarded clean
+.PHONY: help setup setup-local setup-harness setup-week setup-all env mirrors check execute nb guarded gate clean
 
 help:
 	@echo "setup     install the root env (uv sync; KEEPS every optional group already present)"
@@ -25,6 +25,7 @@ help:
 # else, so they are true signals for their week groups.
 OPTIONAL_GROUPS = local:torch harness:langgraph week3:rank_bm25 week4:deepeval
 WEEK_GROUPS = week3 week4
+	@echo "gate [F=path]  mirrors + check, then open F in its sandbox if given"
 
 setup:
 	@groups=""; \
@@ -90,6 +91,13 @@ execute:
 #   make nb F=01_Product_Engineering/sessions/S1_Enterprise_Dev_Environment.py
 nb:
 	uv run marimo edit --sandbox $(F)
+
+# Run the gates before anyone reads it: regenerate mirrors, then run `check`.
+# Pass F= to also open that notebook, sandboxed, once the gates pass.
+#   make gate
+#   make gate F=01_Product_Engineering/sessions/S1_Enterprise_Dev_Environment.py
+gate: mirrors check
+	@if [ -n "$(F)" ]; then $(MAKE) nb F="$(F)"; fi
 
 clean:
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +
