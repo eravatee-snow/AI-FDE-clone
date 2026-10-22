@@ -5,13 +5,17 @@ queueing, streaming, and MCP for free, but you bring your own frontend. That
 split is the point: the API is the product, the UI is disposable.
 """
 
+import json
 import os
 from pathlib import Path
 
 from fastapi.responses import HTMLResponse
 from gradio import Server
 
+from classifier import solve_single
 from llm import stream_reply
+from pydantic import ValidationError
+from schema import SingleIntRequest, SingleIntResponse
 
 app = Server()
 
@@ -27,6 +31,24 @@ FRONTEND = Path(__file__).parent / "frontend" / "index.html"
 def chat(message: str, history: list | None = None) -> str:
     """Stream a reply to one user message."""
     yield from stream_reply(message, history)
+
+
+@app.api(name="classify_incident")
+def classify_incident_endpoint(incident_id: str) -> str:
+    """Classify an incident and return the result as JSON."""
+    try:
+        response = solve_single(SingleIntRequest(incident_id=incident_id))
+    except ValidationError:
+        return SingleIntResponse(
+            needs_human=True,
+            confidence=0,
+            reason="Classification failed: model output was invalid after a retry. Route to human review.",
+        ).model_dump_json()
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+    except KeyError as e:
+        return json.dumps({"error": f"incident not found: {e.args[0]}"})
+    return response.model_dump_json()
 
 
 # --- The frontend ------------------------------------------------------------

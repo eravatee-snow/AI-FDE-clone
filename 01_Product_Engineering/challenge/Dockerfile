@@ -19,8 +19,13 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt \
  && uv pip install --system --no-cache -r requirements.txt
 
-COPY llm.py app.py ./
+COPY llm.py app.py classifier.py schema.py incidents.py ./
 COPY frontend/ ./frontend/
+
+# taxonomy.json and golden.jsonl live in use_case/ at the repo root, outside
+# this build context. They are mounted at runtime rather than baked in:
+#   docker run -v ../../use_case:/app/use_case ...
+ENV USE_CASE_DIR=/app/use_case
 
 # Don't run as root. Your security review will ask about this.
 RUN useradd --create-home appuser
