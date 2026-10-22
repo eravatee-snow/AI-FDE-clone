@@ -1,5 +1,5 @@
 {
-  "_comment": "Approved toil taxonomy for ToilMap. Only human-approved categories live here, and every change is a reviewed commit, so git history is the audit trail. Model-proposed categories are pending and kept in a separate working store until a reviewer approves, renames, or rejects them.",
+  "_comment": "Approved toil taxonomy for ToilMap. Only human-approved categories live here, and every change is a reviewed commit, so git history is the audit trail. Model-proposed categories are returned with category_status new and kept in a separate working store until a reviewer approves, renames, or rejects them.",
   "categories": [
     {
       "name": "hardware_failure",
@@ -19,7 +19,7 @@
     {
       "name": "change_induced_errors",
       "label": "Change-Induced Errors",
-      "description": "An incident traced to a change that was made or executed incorrectly -- a bad config push, an ACL/VLAN error, a missed runbook step, or a process gap during a change. Merges what would otherwise be two overlapping buckets (bad change content vs. bad change process)."
+      "description": "An incident traced to a change that was made or executed incorrectly --a bad config push, an ACL/VLAN error, a missed runbook step, or a process gap during a change. The outage must begin after a change was applied. It is not a change-induced error when the trigger was something lapsing or running out,because no change was applied when the outage began."
     },
     {
       "name": "capacity_congestion",
@@ -52,9 +52,9 @@
       "description": "An outage or degradation in an upstream provider, peering partner, or external dependency outside the team's direct control."
     }
   ],
-  "non_toil": {
+  "not_toil": {
     "name": "not_toil",
     "label": "Not Toil",
-    "description": "A confident judgement that the incident is a genuine one-off with no recurring pattern, so it belongs in no toil category. Distinct from a null category, which means the model could not decide and a human must review."
+    "description": "A confident judgement that the incident is either a genuine one-off with no recurring pattern or a planned, expected event, so it belongs in no toil category. Distinct from a null category, which means the model could not decide and a human must review."
   }
 }
