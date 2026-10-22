@@ -25,7 +25,7 @@ EXTRA_HEADERS = json.loads(os.getenv("LLM_EXTRA_HEADERS") or "{}")
 # Context window override for models LiteLLM doesn't know (self-hosted, gateways).
 MAX_INPUT_TOKENS = int(os.getenv("LLM_MAX_INPUT_TOKENS") or 0) or None
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX") or 0) or None
-TIMEOUT = int(os.getenv("LLM_TIMEOUT") or 5)
+TIMEOUT = int(os.getenv("LLM_TIMEOUT") or 600)
 
 SYSTEM_PROMPT = os.getenv(
     "SYSTEM_PROMPT",
