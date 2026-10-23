@@ -26,9 +26,9 @@ Principal Software Engineer of my team
 | 2 | Which cloud? AWS, Azure, GCP, on-prem, several? | on-prem |
 | 3 | Is there an internal container registry? | yes |
 | 4 | How do users log in? (Okta, Entra ID, Ping, SAML, homegrown) | homegrown, SAML based LDAP or OAuth based LDAP |
-| 5 | Can the app reach the internet? Egress proxy? Allowlist? | yes |
+| 5 | Can the app reach the internet? Egress proxy? Allowlist? | yes to all, but I will be using a local LLM model for now |
 | 6 | Where do secrets come from? (Vault, Secrets Manager, Key Vault) | key vault, called snccredential |
-| 7 | Who approves a deployment, and what review does it need? | There is a comprehensive process in place, where a team of architects will decide based on my proposal is sound enough, if I have architected all aspects of this solution correctly. They might suggest changes to the solution, or request additional information. But, I can deploy to the lab environement wihout any restrictions, that is where I will be starting my development. |
+| 7 | Who approves a deployment, and what review does it need? | There is a comprehensive process in place, where a team of architects will decide based on my proposal is sound enough, if I have architected all aspects of this solution correctly. They might suggest changes to the solution, or request additional information. But, I can deploy to the lab environment without any restrictions, that is where I will be starting my development. |
 | 8 | Is there an approved internal LLM endpoint already? | no, for now, I am using a local LLM model. |
 
 **What surprised you?**
@@ -41,7 +41,7 @@ I do not know fully, but after testing things out in the lab environment, I will
 ---
 
 ## Week 1 — what your machine told you
-Date: 2025-10-16
+Date: 2026-10-16
 host	why	status	signed by
 pypi.org	Python packages	OK	GlobalSign nv-sa
 files.pythonhosted.org	the actual wheel downloads	OK	GlobalSign nv-sa
