@@ -1,4 +1,4 @@
-.PHONY: help setup mirrors check execute nb clean
+.PHONY: help setup mirrors check execute nb gate clean
 
 help:
 	@echo "setup     install the root env (uv sync)"
@@ -6,6 +6,7 @@ help:
 	@echo "check     what CI runs: mirrors, pins, deps, links, tests"
 	@echo "execute  actually RUN every notebook, both .py and .ipynb"
 	@echo "nb F=path open a notebook in its own sandbox (no root env needed)"
+	@echo "gate [F=path]  mirrors + check, then open F in its sandbox if given"
 
 setup:
 	uv sync
@@ -30,6 +31,13 @@ execute:
 #   make nb F=01_Product_Engineering/sessions/S1_Enterprise_Dev_Environment.py
 nb:
 	uv run marimo edit --sandbox $(F)
+
+# Run the gates before anyone reads it: regenerate mirrors, then run `check`.
+# Pass F= to also open that notebook, sandboxed, once the gates pass.
+#   make gate
+#   make gate F=01_Product_Engineering/sessions/S1_Enterprise_Dev_Environment.py
+gate: mirrors check
+	@if [ -n "$(F)" ]; then $(MAKE) nb F="$(F)"; fi
 
 clean:
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +

@@ -19,11 +19,13 @@ from litellm import completion, get_model_info, token_counter
 #   "anthropic/claude-sonnet-5"       -> Anthropic
 #   "ollama/llama3.2"                 -> a model running on your laptop
 #   "openai/my-model" + LLM_API_BASE  -> any OpenAI-compatible server (vLLM, LM Studio, ...)
-MODEL = os.getenv("LLM_MODEL", "gpt-4.1-mini")
+MODEL = os.getenv("LLM_MODEL", "ollama/qwen3.5:9b")
 API_BASE = os.getenv("LLM_API_BASE")  # only needed for self-hosted / gateway endpoints
 EXTRA_HEADERS = json.loads(os.getenv("LLM_EXTRA_HEADERS") or "{}")
 # Context window override for models LiteLLM doesn't know (self-hosted, gateways).
 MAX_INPUT_TOKENS = int(os.getenv("LLM_MAX_INPUT_TOKENS") or 0) or None
+LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX") or 0) or None
+TIMEOUT = int(os.getenv("LLM_TIMEOUT") or 600)
 
 SYSTEM_PROMPT = os.getenv(
     "SYSTEM_PROMPT",
@@ -90,3 +92,16 @@ def stream_reply(message: str, history: list[dict] | None = None):
         if piece:
             reply += piece
             yield reply
+
+
+def complete_json(model: str, messages: json) -> str:
+    """One non-streaming call; return the reply text."""
+    kwargs = {"model": model, "messages": messages, "timeout": TIMEOUT}   # what else does the call need?
+    if API_BASE:
+        kwargs["api_base"] = API_BASE
+    if EXTRA_HEADERS:
+        kwargs["extra_headers"] = EXTRA_HEADERS
+    if LLM_NUM_CTX:
+        kwargs["num_ctx"] = LLM_NUM_CTX
+    response = completion(**kwargs)
+    return response.choices[0].message.content
