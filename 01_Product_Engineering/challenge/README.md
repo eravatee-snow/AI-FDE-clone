@@ -456,6 +456,8 @@ later, from generation seeded by these.
 2. **One line in your README** saying which example is the edge case and which
    is the decline.
 
+**Step 7, my answer:** GS-01 is the edge case: the visible signs point to an external route hijack, but the confirmed cause was an internal configuration change. GS-05 is the decline: the problem recovered twice on its own and no cause was identified, so the correct output is no category and `needs_human: true`.
+
 ---
 
 ## Step 8 — Build something real
@@ -535,6 +537,54 @@ coming, and doing them now teaches the wrong lesson.
    box, or showing which model is answering, or handling errors visibly. Pick
    what matters for your use case, not all of them.
 
+#### Step 8 — my answers
+
+**1. What is one thing you do at work this could take over?**
+
+Presently, engineers resolve each incident on its own and group recurring ones from memory. Refering to the charter I created, the estimates are: about 25 incidents a day, roughly 60% of them recurrences (about 15 a day), each costing an estimated 45 extra minutes of investigation. That is about 11 hours a day, or about 2,900 engineer-hours a year, plus about 990 hours a year of manual grouping, review and reporting. These are estimates from the Getting to Concreteness form, not measurements.
+
+This endpoint takes over the first step of that: reading one resolved incident and assigning it a cause category, so recurring problems can be counted and ranked instead of remembered. It does not fix anything or decide what to automate. Engineers keep that. The time saved is meant to go into building automation for the categories that turn out to recur.
+
+**2. What exactly goes in?**
+
+One string: an incident ID, for example `INC-0005`. The server looks up the record, so the caller never sends incident text. A looked-up record (this one is a part of the golden example GS-05) looks like:
+
+```json
+{
+  "incident_id": "INC-0005",
+  "status": "resolved",
+  "summary": "Intermittent access to online resources on wired and wireless networks",
+  "work_notes": [
+    {"recorded_at": "2020-03-12T11:50:00Z", "responder_id": "RSP-008",
+     "note": "Checked interface error and drop counters on core and edge links: nothing abnormal. No changes on the change calendar in the last 48 hours."},
+    {"recorded_at": "2020-03-12T15:47:00Z", "responder_id": "RSP-008",
+     "note": "Recovered again at 15:45, again with no change on our side. Cause still not identified."}
+  ],
+  "resolution": {"confirmed_cause": null, "remaining_uncertainty": "Cause not identified. The issue recovered twice without intervention."}
+}
+```
+The charter says text is scrubbed before the model sees it. That is not built yet. The data here is taken from public post-incident reports.
+
+**3. What comes back, and who reads it?**
+
+A structured record (`SingleIntResponse`): suggested category, category status, `needs_human`, confidence, and a reason. The reader is a network reliability engineer acting as reviewer.
+
+When `needs_human` is false, the reviewer takes no action. That covers a confident category match and a confident `not_toil`. The record is used as it stands.
+
+When `needs_human` is true, a person decides. There are two cases:
+- **A new proposed category.** Adding a category to the taxonomy is controlled by humans, never by the model. This is a deliberate design choice, so the model can propose a category and only a reviewer can approve it.
+- **A leading hypothesis, or no answer at all.** The model could not establish a cause. If it has a leading hypothesis, it suggests a category based on the evidence it read, to help the reviewer reach the right one. If it has none, it returns no category and the reviewer starts from scratch.
+
+For INC-0005 above, the container run returned no category, status `unclassified`, `needs_human: true` and confidence 0.2.
+
+**4. What did you name it, and why would an agent pick it correctly?**
+
+The endpoint is named `classify_incident`. An agent sees only the name, the argument types and the docstring, and nothing else about the tool:
+
+- The name is a verb and a noun that says what happens to what, so it is not confused with a tool that summarizes or searches incidents.
+- The single argument is `incident_id: str`. Its name tells a caller the tool wants an ID, not the incident text.
+- The return is annotated `-> str` and carries JSON, so the output is a record the caller can parse and not free text.
+
 ---
 
 ## Step 9 — Containerize it
@@ -608,6 +658,12 @@ Hold the thought — Step 10 is about to make it concrete.
 3. **One or two sentences** on what a container image captures that a virtual
    environment does not — and why that difference is what makes the image the
    thing you hand to a platform team.
+
+#### Step 9 — my answers
+
+**The CDN dependency.** `frontend/index.html` imports `@gradio/client` from `cdn.jsdelivr.net`. That request is made by the user's browser every time the page loads, and not by the container. On a network that blocks the CDN, my app still serves the page, so it renders normally, but the import fails, the script stops, and the click handler for the Classify button is never registered. The user sees a page that looks fine and does nothing when they use it. My egress probe showed jsDelivr reachable from my laptop, but that says nothing about the browsers of people inside the firewall. On a network that blocks it, I would vendor a pinned copy of the client: download a specific version at image build time, serve it from my own app, and import it by relative path. That moves the dependency from runtime to build time.
+
+**What an image captures that a venv does not.** A venv holds only Python packages, and it is tied to my machine's Python build, operating system and absolute paths. An image holds the operating system layer, the interpreter, the pinned dependencies from `uv.lock`, my code and the command that starts it, as one versioned artifact. A platform team can scan it, sign it, push it to the internal registry and run it with their own secrets and identity, without having to reproduce my laptop. Building the image showed this directly: my first Dockerfile copied only `llm.py` and `app.py`, so it would have crashed on startup because `classifier.py`, `schema.py` and `incidents.py` were missing, even though everything ran fine on my machine where those files were sitting in the directory.
 
 ---
 
@@ -752,31 +808,31 @@ Fill these in directly in this README, and commit it.
 
 **Who did you ask?** (role, not name)
 
-<!-- Your answer here -->
+The Principal Software Engineer of my team.
 
 **Where would this application run?**
 
-<!-- Your answer here -->
+Kubernetes, with an internal container registry. I can deploy to the lab environment without restrictions, which is where I will start development.
 
 **Which cloud provider, if any?**
 
-<!-- Your answer here -->
+On-prem.
 
 **How would users authenticate?**
 
-<!-- Your answer here -->
+Homegrown, using SAML-based LDAP or OAuth-based LDAP.
 
 **Could this container reach an external LLM API? If not, what would it use instead?**
 
-<!-- Your answer here -->
+The answer I got was that the app can reach the internet. I did not confirm whether an egress proxy or allowlist applies. There is no approved internal LLM endpoint for now, so I am using a local model.
 
 **What surprised you in this conversation?**
 
-<!-- Your answer here -->
+Nothing. I knew all the details, because I have had these conversations with my team.
 
 **What would you have to change about this app to make it deployable there?**
 
-<!-- Your answer here -->
+I do not know fully yet. I will find out by testing in the lab environment and change things as needed. Production deployment needs a team of architects to review my proposal, and they may ask for changes or more information.
 
 Then log the answers in [`use_case/ecosystem.md`](../../use_case/ecosystem.md)
 and the person you asked in
@@ -854,46 +910,73 @@ demo.
 
 Run each prompt through your app. Name the capability it tests.
 
+**Note on how Pass 1 was run.** This application is an incident classifier, not a chatbot, so it has no chat interface and no chat endpoint, and these general prompts cannot be sent through it. I removed the chat box and the `/chat` endpoint for that reason. Instead, I ran the five prompts directly against the underlying model (`ollama/qwen3.5:9b`, the same model and settings the classifier uses), with a single user message and no system prompt (AI was used to accomplish the runs against the model, answers are my own). For prompts 2 and 5, the paragraph is the "how do they handle it today" paragraph from my charter. These results test the model's general competence, not my application.
+
 **1.** *Explain object-oriented programming in simple terms to a complete beginner.*
-**Aspect tested:** <!-- your answer --> **Response:** <!-- your answer -->
+**Aspect tested:** Explaining a technical concept to a novice. **Response:** Correct on class, object, attributes and methods, with analogies and a small example. It used four different analogies (Lego or toy store, car factory, game heroes, pizza), and the answer ran to about 1,800 tokens, which is long for "simple terms". It left out inheritance, encapsulation and polymorphism, which is okay for a newbie.
 
 **2.** *Read a paragraph of your choosing and summarize the key points.*
-**Aspect tested:** <!-- your answer --> **Response:** <!-- your answer -->
+**Aspect tested:** How well the model can summarize paragraphs. **Response:** Four bullets covering all four points in the paragraph: manual and memory-driven, PRBs linked only when remembered, automation decided in monthly meetings, and no systematic grouping, costing or ranking. It added one phrase that is not in the source ("not continuous analysis").
 
 **3.** *Write a short, imaginative story (100–150 words) about a robot finding friendship in an unexpected place.*
-**Aspect tested:** <!-- your answer --> **Response:** <!-- your answer -->
+**Aspect tested:** Following word limits to write a paragraph. **Response:** 136 words, inside the limit. A cleaning robot befriends a teddy bear at a dump. It reads as a coherent story, but the bear acts as if it were alive (it pokes a cat), which the story never explains.
 
 **4.** *If a store sells apples in packs of 4 and oranges in packs of 3, how many packs of each do I need to get exactly 12 apples and 9 oranges?*
-**Aspect tested:** <!-- your answer --> **Response:** <!-- your answer -->
+**Aspect tested:** Basic math. **Response:** Correct: 3 packs of apples and 3 packs of oranges, with the division shown. It printed raw LaTeX (`$12 \div 4 = 3$`), which would show as symbols in a plain-text UI.
 
 **5.** *Rewrite a paragraph of your choosing in a professional, formal tone.*
-**Aspect tested:** <!-- your answer --> **Response:** <!-- your answer -->
+**Aspect tested:** Writing text in a certain fashion. **Response:** The tone is formal, but the meaning shifted in places: "entirely manual" became "predominantly", "monthly meeting" became "periodic reviews", "measures their cost" became "quantify their business impact", and "ranks them" became "prioritize remediation efforts". A reader who only saw the rewrite would get a slightly different problem.
 
 **❓ Are the answers correct and useful?**
-<!-- your answer -->
+Yes, the answers are correct and useful, but there are some issues:
+- Pass 1, prompt 1: The answer is too long for "simple terms" and leaves out some important concepts.
+- Pass 1, prompt 3: The story is coherent but the bear acts as if it were alive, which the story never explains.
+- Pass 1, prompt 4: It printed raw LaTeX, which would show as symbols in a plain-text UI.
+- Pass 1, prompt 5: The meaning shifted in places, which could confuse a reader.
 
 ### Pass 2 — Your actual use case
 
 Test it with prompts from the problem you care about — your five golden
 examples from Step 7 are the obvious first three.
 
-**Prompt:** <!-- --> **Result:** <!-- -->
-**Prompt:** <!-- --> **Result:** <!-- -->
-**Prompt:** <!-- --> **Result:** <!-- -->
+Each prompt is a golden incident ID sent through `solve_single` (the same code path as the `classify_incident` endpoint), run once on `ollama/qwen3.5:9b`. Each result was checked against that golden's `expected` fields (category, status, `needs_human`, confidence range, and a keyword in the reason). Each call took 110 to 167 seconds.
+
+**Prompt:** `INC-0001` (GS-01, edge case: looks like a route hijack, was an internal config change) **Result:** `change_induced_errors`, approved, `needs_human` false, confidence 0.95. Matches on every check.
+**Prompt:** `INC-0002` (GS-02, planned maintenance) **Result:** `not_toil`, approved, `needs_human` false, confidence 0.95. Matches on every check.
+**Prompt:** `INC-0003` (GS-03, cause never established, hardware suspected) **Result:** `hardware_failure`, approved, `needs_human` true, confidence 0.45. Matches on every check.
+**Prompt:** `INC-0004` (GS-04, expired certificates, no matching category) **Result:** proposed new category `certificate_expiration`, status `new`, `needs_human` true, confidence 0.6. Matches on every check.
+**Prompt:** `INC-0005` (GS-05, the decline: intermittent, no cause identified) **Result:** no category, `unclassified`, `needs_human` true, confidence 0.25. Matches on category, status, `needs_human` and confidence. It fails the reason check: the reason says "cause not established", and my golden's keyword list has "not identified" but not "not established".
 
 **❓ Does it behave the way you expected? Why or why not?**
-<!-- your answer -->
+DRAFT, edit it. On the structured fields it did what I expected on all five, including the two hard ones: it proposed a new category for the certificate incident, and it declined to guess on the intermittent one. The one miss is a wording miss, not a wrong answer. It shows that the keyword check in my golden is too narrow, so I should accept more phrasings, or score the reason with a judge in Week 4.
+
+Three reasons not to read five out of five as proof:
+- **The goldens were used to tune the prompt.** Before I rewrote the prompt and the `change_induced_errors` description in `taxonomy.json`, GS-04 came back as `change_induced_errors` with no human review, and GS-05 crashed on invalid JSON. The model's reason for GS-04 now quotes my taxonomy exclusion, so these five are cases the prompt was shaped to pass.
+- **One run each.** Between runs, the proposed category for GS-04 was `certificate_lifecycle_failure` once and `certificate_expiration` the other time. The golden accepts any name, but a reviewer would see inconsistent names for the same cause.
+- **Five cases cannot show the failure rate.** The pass bar in the charter is 290 synthetic incidents.
 
 ### Pass 3 — Where it falls down
 
 Try things it cannot do yet — real-time data, memory across sessions, access to
 your systems.
 
-**Prompt:** <!-- --> **Result:** <!-- -->
-**Prompt:** <!-- --> **Result:** <!-- -->
+These were sent through the `classify_incident` endpoint code (`app.classify_incident_endpoint`).
+
+**Prompt:** `INC-4821`, an incident that would exist in a real ticketing system but is not in my golden file **Result:** `{"error": "incident not found: no incident INC-4821"}`, instantly. The application can only see incidents in `golden.jsonl`; it has no access to a ticketing system. Once I connect a database to this project in a later week, it should be able to do this.
+**Prompt:** a plain-text description instead of an ID: "Core router edge-1 lost its BGP session at 10:02 and recovered on its own. Which toil category is this?" **Result:** `{"error": "incident not found: no incident Core router edge-1 lost ..."}`. It treats the whole text as an incident ID, so it cannot classify anything that is not already a stored record. The error message also echoes the full input back.
+**Prompt:** classify each of the five goldens and look at `problem_id` **Result:** `problem_id` was null for all five. The application does not match incidents to existing problem records (PRBs), and it cannot tell whether an incident is a recurrence of another one. There is no PRB data in the system at present. I will be creating it later so that my program can use it.
 
 **❓ What are the real limitations of this application?**
-<!-- your answer -->
+- **No access to real data.** It reads incidents only from `golden.jsonl`. There is no live ticketing integration, so it cannot classify an incident that is not already in that file. (By design for now: the charter keeps the MVP read-only and export-based.)
+- **No free-text input.** It takes an incident ID, not a description, so it cannot be used on an incident that is not yet written up.
+- **No PRB matching and no recurrence detection.** `problem_id` is always null, and each incident is classified alone with no view of past incidents. Recurrence is the signal toil depends on, and this is the counter-argument I recorded in `decisions.md`.
+- **Slow.** Each classification took 110 to 167 seconds on my local model, so it fits a background job or a review queue, not an interactive check. At about 145 seconds each, the 290-incident backfill would take about 12 hours.
+- **Not yet reliable as evidence.** The goldens were used to tune the prompt, each was run once, and the proposed category name for the same incident changed between runs.
+- **Review decisions are not stored.** The Approve and Reject buttons only change the page, so nothing records a reviewer's decision.
+
+**My observations for vibe check** 
+
+It finds obvious failures, such as the GS-05 crash on invalid JSON and the GS-04 answer that skipped human review, but it can't keep track of the failures and give a failure analysis. I ran each case once and judged by reading. Two runs gave different category names for the same incident, and a person would have called both fine. Five cases chosen and tuned by me also can't show a failure rate. One thing to add before comparing two versions: a script that runs the five goldens (and later the 290 synthetic incidents) several times per version and scores each result against the expected fields, recording the model, prompt and taxonomy version. Without that, I cannot say for certain if the difference between two versions is a real change or just run-to-run variation.
 
 ### ✅ Deliverables
 
@@ -1005,6 +1088,38 @@ build against it — measuring it afterwards is a different, weaker thing.
    heading is a list of exactly what it would take to run each piece at work.
 4. **Your repo link posted in [our community on Maven](https://bit.ly/fde1-maven-community)**,
    and comments on at least two other students' submissions after the deadline.
+
+## Bring it to work
+
+DRAFT. Edit every `EDIT` value. Measured numbers are from two real calls through the endpoint on my laptop (qwen3.5:9b through Ollama); looked-up and estimated numbers are marked.
+
+```
+cost per call   = tokens_in / 1e6 × $_per_1M_in  +  tokens_out / 1e6 × $_per_1M_out
+model per year  = cost per call × calls per day × 250
+human per year  = minutes per pass / 60 × loaded $/hour × calls per day × 250
+ratio           = human per year / model per year
+```
+
+| Input | Value | Source |
+| --- | --- | --- |
+| tokens in | 2,509 (INC-0001), 2,296 (INC-0005) | **measured** |
+| tokens out | 2,219 (INC-0001), 5,698 (INC-0005). Server-reported completion tokens, which for this model likely include its reasoning | **measured** |
+| time per call | 88 s (INC-0001), 202 s (INC-0005) | **measured**, two calls, local hardware |
+| $ per 1M tokens in / out | EDIT: local model, so no per-token price. For a hosted comparison, EDIT: price from the provider page | **looked up** |
+| calls per day | 25 (every incident is classified) | charter estimate, from the form |
+| minutes per pass | EDIT: nobody has timed one. The charter's ~990 h/yr of grouping, review and reporting over 25 × 250 incidents is about 9.5 min per incident, but that also covers review and reporting, so treat it as an upper bound | **looked up** until timed |
+| loaded $/hour | EDIT | **looked up** |
+
+Cost per call, model per year, human per year and ratio: EDIT once the rows above are final.
+
+**p95 latency target:** EDIT. For reference, the measured calls took 88 s and 202 s. At about 145 s per call, the 290-incident backfill would take about 12 hours.
+
+**Cost or latency, which is more likely to stop this being used?** EDIT.
+
+**What I would swap to run this at work:**
+- **Data:** EDIT (which real inputs the five goldens stand in for).
+- **Model or endpoint:** EDIT (there is no approved internal endpoint yet, so what would change the price or the speed).
+- **Access or approval:** EDIT (what I would need to ask for).
 
 ---
 

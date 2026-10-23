@@ -13,7 +13,6 @@ from fastapi.responses import HTMLResponse
 from gradio import Server
 
 from classifier import solve_single
-from llm import stream_reply
 from pydantic import ValidationError
 from schema import SingleIntRequest, SingleIntResponse
 
@@ -27,15 +26,25 @@ FRONTEND = Path(__file__).parent / "frontend" / "index.html"
 # output components and silently returns nothing. Ask us how we know.
 
 
-@app.api(name="chat")
-def chat(message: str, history: list | None = None) -> str:
-    """Stream a reply to one user message."""
-    yield from stream_reply(message, history)
-
-
 @app.api(name="classify_incident")
 def classify_incident_endpoint(incident_id: str) -> str:
-    """Classify an incident and return the result as JSON."""
+    """Classify one resolved network incident into a toil category.
+
+    Args:
+        incident_id: The incident ID to look up, e.g. "INC-0005". Send the ID,
+            not the incident text.
+
+    Returns:
+        A JSON string. On success: suggested_category (an approved taxonomy
+        category, "not_toil", or a newly proposed name; null when no category
+        applies), category_status ("approved", "new" or "unclassified"),
+        needs_human, confidence (0 to 1), and reason. needs_human is false only
+        for a confident approved category or not_toil. It is true for a newly
+        proposed category, a low-confidence leading hypothesis, or no answer,
+        and a person must review those. If the model output stays invalid
+        after one retry, a needs_human=true response is returned. If the ID is
+        empty or unknown, the result is {"error": "..."}.
+    """
     try:
         response = solve_single(SingleIntRequest(incident_id=incident_id))
     except ValidationError:
