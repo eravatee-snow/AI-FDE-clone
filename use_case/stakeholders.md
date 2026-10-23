@@ -11,7 +11,7 @@ Use roles, not names. This is a public repo.
 
 | Week | Who (role) | What you asked | What you learned | Follow-up |
 | --- | --- | --- | --- | --- |
-| 1 | The Principal Software Engineer of my team | where would a container run here? | k8s | <!-- --> |
+| 1 | The Principal Software Engineer of my team | where would a container run here? | The container would run on the internal k8s platform | <!-- --> |
 
 ---
 

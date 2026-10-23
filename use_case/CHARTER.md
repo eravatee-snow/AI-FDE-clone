@@ -56,7 +56,7 @@ It replaces the monthly opinion-sharing meeting with a report engineers can chec
 - Time to answer "what are our top recurring issues?" drops from days to minutes.
 - Prototype pass bar: measured on 290 synthetic Incidents with known correct outcomes:
   - **Auto-decisions are trustworthy:** at least 90% of incidents classified into a toil category can be trusted to be correct. The incidents that get tagged as non-toil can also be trusted.
-  - **Auto-rejections are rarer mistakes still:** at least 95% of incidents classified as non-toil are found to be correctly . A wrongly classified incident creates more noise in the data as compared to an incident that was wrongly sent for human review.
+  - **Auto-rejections are rarer mistakes still:** at least 95% of incidents classified as non-toil are found to be correctly classified. A wrongly classified incident creates more noise in the data as compared to an incident that was wrongly sent for human review.
   - **Every type of resolution works:** recall of at least 85% on each of the 10 toil categories. No single policy can be carried by the others.
   - **Review load actually drops:** no more than 25% of incidents are sent to human review, compared with 100% today. Without this ceiling, the first line can be met by sending everything to a person.
   - **Confidence means something:** among decisions made at 0.9 confidence or higher, the observed accuracy is within 5 points of the stated confidence.
