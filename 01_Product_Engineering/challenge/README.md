@@ -824,7 +824,7 @@ Homegrown, using SAML-based LDAP or OAuth-based LDAP.
 
 **Could this container reach an external LLM API? If not, what would it use instead?**
 
-The answer I got was that the app can reach the internet. I did not confirm whether an egress proxy or allowlist applies. There is no approved internal LLM endpoint for now, so I am using a local model.
+Yes to all (internet access, egress proxy and allowlist), but I will be using a local LLM model for now. There is no approved internal LLM endpoint at present.
 
 **What surprised you in this conversation?**
 
