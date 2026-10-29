@@ -56,7 +56,13 @@ def jaccard(a: set, b: set) -> float:
     return len(a & b) / len(a | b)
 
 
-def dedupe(rows: Sequence[dict], *, threshold: float = 0.7, key: str = "input"):
+def dedupe(
+    rows: Sequence[dict],
+    *,
+    threshold: float = 0.7,
+    key: str = "input",
+    text: Callable[[dict], str] | None = None,
+):
     """Keep a row only if it is unlike everything kept so far.
 
     Returns `(kept, dropped)` where dropped is `[(row, the_row_it_matched)]` —
@@ -66,12 +72,14 @@ def dedupe(rows: Sequence[dict], *, threshold: float = 0.7, key: str = "input"):
 
     Character n-grams will NOT catch "floor 3" vs "floor three". Embeddings
     would; they arrive in Week 3, and the upgrade is deliberate.
+
+    `text` overrides `key` for rows whose content is not one flat string field.
     """
     kept: list[dict] = []
     kept_shingles: list[set] = []
     dropped: list[tuple] = []
     for row in rows:
-        sig = shingles(str(row.get(key, "")))
+        sig = shingles(text(row) if text else str(row.get(key, "")))
         twin = next(
             (index for index, other in enumerate(kept_shingles) if jaccard(sig, other) >= threshold),
             None,
@@ -87,19 +95,24 @@ def dedupe(rows: Sequence[dict], *, threshold: float = 0.7, key: str = "input"):
 # ------------------------------------------------------------- leak checking
 
 
-def leak_check(seeds: Sequence[dict], generated: Sequence[dict]) -> list[str]:
+def leak_check(
+    seeds: Sequence[dict],
+    generated: Sequence[dict],
+    text: Callable[[dict], str] | None = None,
+) -> list[str]:
     """Distinctive strings from the seeds that survived into the output.
 
     Catches names, companies, and identifiers. It cannot catch a distinctive
     scenario, an unusual document structure, or a category only one of your
     clients has — so a clean result is not a clearance. Read a sample yourself.
+
+    `text` overrides the default `input`/`output` fields, the same as in `dedupe`.
     """
-    blob = " ".join(
-        f"{row.get('input', '')} {row.get('output', '')}" for row in generated
-    ).lower()
+    as_text = text or (lambda row: f"{row.get('input', '')} {row.get('output', '')}")
+    blob = " ".join(as_text(row) for row in generated).lower()
     found: list[str] = []
     for seed in seeds:
-        text = f"{seed.get('input', '')} {seed.get('output', '')}"
+        text = as_text(seed)
         candidates = set(
             re.findall(r"\b[A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,})+\b", text)
         )
@@ -123,6 +136,9 @@ class SDGReport:
     after_dedupe: int = 0
     valid: int = 0
     leaks: list = field(default_factory=list)
+    # (row, the_row_it_matched) for every row dedupe removed. Read these before
+    # trusting the threshold.
+    dropped: list = field(default_factory=list)
 
     @property
     def variety(self) -> float:
@@ -149,6 +165,7 @@ def generate(
     axes: dict[str, Sequence[str]],
     *,
     per_combo: int = 3,
+    n_examples: int = 3,
     limit: int | None = None,
     validate: Callable[[dict], bool] | None = None,
     dedupe_threshold: float = 0.7,
@@ -156,20 +173,32 @@ def generate(
     max_retries: int = 3,
     timeout: float = 120.0,
     stats=None,
+    llm_kwargs: dict | None = None,
+    exclude: Callable[[dict], bool] | None = None,
+    row_text: Callable[[dict], str] | None = None,
 ) -> tuple[list[dict], SDGReport]:
     """Generate across the axis space, dedupe, validate, and report honestly.
 
     `validate` is your pydantic model's check — anything that raises or returns
     False drops the row. Most generated data dies here, and that is the system
     working.
+
+    `exclude` removes combinations that cannot exist before any call is made, so
+    they are never confused with combinations that failed.
+
+    `row_text` turns a row into the text that dedupe and the leak check compare.
+    Without it both read `input`/`output`, and rows without those fields all
+    look identical.
     """
     from .llm import chat
 
     combos = combinations(axes)
+    if exclude:
+        combos = [combo for combo in combos if not exclude(combo)]
     if limit:
         combos = combos[:limit]
 
-    shown = "\n".join(json.dumps(seed, ensure_ascii=False) for seed in seeds[:3])
+    shown = "\n".join(json.dumps(seed, ensure_ascii=False) for seed in seeds[:n_examples])
     report = SDGReport()
     raw: list[dict] = []
 
@@ -184,7 +213,8 @@ def generate(
         # you think your axes give you is quietly smaller than you believe.
         try:
             reply = chat(
-                cfg, prompt, timeout=timeout, max_retries=max_retries, stats=stats
+                cfg, prompt, timeout=timeout, max_retries=max_retries, stats=stats,
+                **(llm_kwargs or {}),
             )
         except RuntimeError:
             reply = ""
@@ -202,7 +232,7 @@ def generate(
             progress(combo_number, len(combos))
 
     report.generated = len(raw)
-    kept, dropped = dedupe(raw, threshold=dedupe_threshold)
+    kept, report.dropped = dedupe(raw, threshold=dedupe_threshold, text=row_text)
     report.after_dedupe = len(kept)
 
     if validate:
@@ -216,5 +246,5 @@ def generate(
                 pass
         kept = valid
     report.valid = len(kept)
-    report.leaks = leak_check(seeds, kept)
+    report.leaks = leak_check(seeds, kept, text=row_text)
     return kept, report
