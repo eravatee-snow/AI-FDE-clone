@@ -906,6 +906,44 @@ def test_sdg_counts_a_dead_axis_combo_instead_of_losing_it(monkeypatch):
     assert "combos failed" in str(report)
 
 
+def test_sdg_exclude_skips_impossible_combos_without_counting_them(monkeypatch):
+    """A combination removed on purpose is never sent, and is not a failure."""
+    prompts = []
+
+    def fake_chat(cfg, prompt, **kw):
+        prompts.append(prompt)
+        return '{"input": "a question", "output": "an answer"}'
+
+    monkeypatch.setattr("helpers.llm.chat", fake_chat)
+
+    _, report = sdg.generate(
+        _FakeCfg2(),
+        seeds=[{"input": "seed", "output": "out"}],
+        axes={"tone": ["terse", "verbose"], "topic": ["a", "b"]},
+        per_combo=1,
+        exclude=lambda combo: combo == {"tone": "terse", "topic": "b"},
+    )
+    assert len(prompts) == 3
+    assert not any("- tone: terse\n- topic: b" in p for p in prompts)
+    assert report.failed_combos == 0
+
+
+def test_sdg_row_text_stops_rows_without_input_from_all_looking_identical():
+    """Rows with no `input` field shingle to the same empty string and dedupe
+    to one row. `text` tells dedupe and leak_check where the content lives."""
+    rows = [{"incident": {"summary": "core switch line card failed"}},
+            {"incident": {"summary": "carrier fibre cut on the metro ring"}}]
+    as_text = lambda row: row["incident"]["summary"]
+
+    assert len(sdg.dedupe(rows)[0]) == 1                  # the silent failure
+    assert len(sdg.dedupe(rows, text=as_text)[0]) == 2
+
+    seeds = [{"incident": {"summary": "Outage at SITE-0042"}}]
+    leaked = [{"incident": {"summary": "again at SITE-0042"}}]
+    assert sdg.leak_check(seeds, leaked) == []            # a false all-clear
+    assert "SITE-0042" in sdg.leak_check(seeds, leaked, text=as_text)
+
+
 # ---------------------------------------------------------------------- memory
 
 
