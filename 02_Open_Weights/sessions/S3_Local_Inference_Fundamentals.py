@@ -481,7 +481,7 @@ def _(mo):
     incident"*, in one to three sentences — and say what the 95%-mass count you
     just watched tells you about what Legal is signing up for on either side.
 
-    **Answer:**
+    **Answer:** I think that temperature should be higher, this will show how many probable options can be considered, as opposed to a low temperature option which will default towards the most possible few answers.
     """)
     return
 
@@ -634,7 +634,7 @@ def _(mo):
     tool for that run, and what top-p does about it that she would otherwise
     have to tune by hand and re-justify per incident.
 
-    **Answer:**
+    **Answer:** Top k will not shift based on model confidence. It will remain the same for all incidents but different incidents need some nuance that top p can preserve as it finds the best probabilistic fits. So a rule defining which type of words should be picked next will work for all cases.
     """)
     return
 
