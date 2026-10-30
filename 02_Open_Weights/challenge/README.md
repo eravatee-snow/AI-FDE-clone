@@ -449,6 +449,36 @@ worth applied to it.
 
 ---
 
+## My submission
+
+| Deliverable | Where it lives |
+| --- | --- |
+| Axes, with a one-line reason each | `axes.py` (comments) and the Variation axes table in [`DATASHEET.md`](../../use_case/data/DATASHEET.md) |
+| Counts and settings | Generation run, in [`DATASHEET.md`](../../use_case/data/DATASHEET.md) |
+| What I removed after reading fifty rows | Leakage check, in [`DATASHEET.md`](../../use_case/data/DATASHEET.md) |
+| Model/endpoint and dedupe decisions | Week 2 rows in [`decisions.md`](../../use_case/decisions.md) |
+| Step 6 review | Below, and the Week 2 row in [`stakeholders.md`](../../use_case/stakeholders.md) |
+| Swap lines | `## Bring it to work`, below |
+
+### Step 6 — what the reviewer said
+
+This section is void as my reviewer decided to let this prototype remain as a demo. If this were to move into the production cycle, since we would consume production data, we would need to rethink the axes and the taxonomy based on our data
+
+1. **Which of these would never actually happen?** N/A
+2. **What comes in that is not here at all?** N/A
+3. **If this were public, what would worry you?** The main concern would be the potential for hallucination and the need for proper validation of the generated data
+
+## Bring it to work
+
+**The project at work this is for:** I see the value in building this project out and starting a toil management system at my workplace. I am not sure how well this will be received or how much value will actually be derived from it once implemented, but it's a good starting point.
+
+**What I would swap to run this at work:**
+- **Data:** Use actual production data and create a new taxonomy that reflects what that data actually contains
+- **Model or endpoint:** Use a model that is available within our network and doesn't require data to leave the network
+- **Access or approval:** Get approval from my director to implement this with actual frontier models
+
+---
+
 ## What this challenge deposits for later
 
 | What you write | Where it lives | When it comes back |

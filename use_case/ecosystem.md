@@ -57,6 +57,18 @@ gap is worth chasing — it usually means a proxy nobody documented.
 
 ---
 
+## Week 2 — a model you own
+
+**What ran:** `qwen3.5:9b` through Ollama on my laptop (Apple M3 Pro, 18 GB), about 100 s per call with thinking off. The weights downloaded without being blocked.
+
+**Is a local model a plausible deployment path at my firm, and what would have to be true?**
+Local model is not a plausible dpeloyment path for my firm, we would prefer to use a frontier model for best possible outcomes. But for the sake of this demo that I will present, I will use a locally hosted model to save development costs and data leak risks
+
+**Publishing constraint:** internal system names may not appear in public material, so this repo describes systems by type and owner only.
+My internal stakeholders major concern is data leak risks, so I will use a locally hosted model for this demo.
+
+---
+
 ## Week 9 — the full checklist
 
 <!--
