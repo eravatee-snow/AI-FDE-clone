@@ -11,7 +11,8 @@ Use roles, not names. This is a public repo.
 
 | Week | Who (role) | What you asked | What you learned | Follow-up |
 | --- | --- | --- | --- | --- |
-| 1 | The Principal Software Engineer of my team | where would a container run here? | The container would run on the internal k8s platform | <!-- --> |
+| 1 | The Principal Software Engineer of my team | where would a container run here? | The container would run on the internal k8s platform | no follow-up was necessary |
+| 2 | Principal engineer of my team | Showed 20 synthetic rows and the datasheet, and asked: (1) which of these would never actually happen? (2) what comes in that is not here at all? (3) if this were public, what would worry you? | They felt that at this point I am not required to have any more context on the problem | If this tool gets picked for a production cycle, at that point necessary redesigns and data related conversations will be made|
 
 ---
 

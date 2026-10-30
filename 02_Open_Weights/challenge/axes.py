@@ -20,7 +20,7 @@ OUTCOME_LABELS: dict[str, str] = {
         f"the underlying cause is: {category['description']} {NEVER_NAME}": category["name"]
         for category in TAXONOMY["categories"]
     },
-    f"a one-off or planned event, such as scheduled maintenance by us or a provider, with no recurring pattern. {NEVER_NAME}": "not_toil",
+    f"a planned or expected event rather than a failure: work scheduled and announced in advance, by us or by a provider, such as a maintenance window, a planned cutover or a pre-notified provider repair, whose impact matched what was announced. The record must say that the work was planned and when it was announced. Nothing failed unexpectedly: it is not a component failure, a cable cut, an attack, or planned work that caused more impact than announced, even if it happened only once. {NEVER_NAME}": "not_toil",
     f"a recurring kind of problem that none of the existing toil categories describes, for example something lapsing such as an expiring certificate or it can be any other name that is not already a part of the taxonomy list. {NEVER_NAME}": "new_category",
 }
 
@@ -36,8 +36,8 @@ AXES: dict[str, list[str]] = {
     "evidence": [
         "complete evidence, from start to finish, every step taken, every discussion covered, every decision documented and the final result with resolution noted on the incident",  # complete
         "the initial description and final resolution documented, but intermediate steps taken were not documented",  # partial
-        "responders recorded two or more competing explanations that point to different kinds of cause, and the record never settles which one was right",  # conflicting
-        "the investigation never established a root cause: the notes show checks that found nothing conclusive, and the resolution says the cause is unknown",  # absent -- the decline
+        "responders recorded two or more competing explanations that belong to different kinds of cause, such as a hardware fault versus a software bug or a bad change, never just one failed part versus another; the notes lean toward one of them, the real cause, with more supporting evidence than the others, but nothing confirms it and the record never settles which one was right",  # conflicting
+        """If the investigation never established a root cause, ensure the work_notes on the incident record list the checks that were performed — and each came back clean; no note favours one explanation over another; the case closes with the reason recorded as "not determined". Whatever really happened may show in the details related to the incident, but nothing in the record confirms it. The expected output has the same shape as example GS-05: no category, unclassified, sent to a human, confidence at most 0.3.""",  # absent -- the decline
     ],
     # Whether the first visible symptoms point at the real cause or at a tempting wrong one.
     # Misleading does not require a cause to be found; evidence decides that
@@ -57,11 +57,64 @@ AXES: dict[str, list[str]] = {
     ],
 }
 
+# Earlier wordings of an outcome value -> its label. Added after AXES so they are never
+# generated again, but rows made from them still resolve to their label
+OUTCOME_LABELS[
+    f"a one-off or planned event, such as scheduled maintenance by us or a provider, with no recurring pattern. {NEVER_NAME}"
+] = "not_toil"
+
 
 def is_dead(combo: dict) -> bool:
     """A misleading value whose hidden cause is the category it tempts toward is
     not misleading at all, so the combination cannot exist."""
     return TEMPTS.get(combo["surface_vs_cause"]) == OUTCOME_LABELS[combo["outcome_type"]]
+
+
+def expected_from_axes(combo: dict) -> dict:
+    """The expected block a row with these axes must have, decided by the rules
+    rather than by the model.
+
+    Leaves out what the axes cannot decide: reason_must_mention_any, and the
+    invented name for a new category. Those come from the model's row afterwards.
+    """
+    hidden = OUTCOME_LABELS[combo["outcome_type"]]
+    # Same order as the evidence values in AXES, and as EVIDENCE in generate.py
+    evidence = ("complete", "partial", "conflicting", "absent")[
+        AXES["evidence"].index(combo["evidence"])
+    ]
+
+    def label(category: str | None, status: str, needs_human: bool, confidence: dict) -> dict:
+        return {
+            "suggested_category": category,
+            "category_status": status,
+            "problem_id": None,
+            "needs_human": needs_human,
+            "confidence": confidence,  # {"min": ...} and/or {"max": ...}
+        }
+
+    # R1: no cause, no leading hypothesis (rule 5b)
+    if evidence == "absent":
+        return label(category=None, status="unclassified", needs_human=True, confidence={"max": 0.3})
+
+    # R6: a leading hypothesis on an existing category, sent for review (rule 5a)
+    if evidence == "conflicting":
+        # No existing category fits a new cause, so there is no hypothesis to lead with:
+        # labelled like R1 (decisions.md)
+        if hidden == "new_category":
+            return label(category=None, status="unclassified", needs_human=True, confidence={"max": 0.3})
+        return label(category=hidden, status="approved", needs_human=True, confidence={"min": 0.31, "max": 0.49})
+
+    # complete / partial from here: the cause is established (rule 4)
+    # R4 (rule 4a)
+    if hidden == "not_toil":
+        return label(category="not_toil", status="approved", needs_human=False, confidence={"min": 0.8})
+
+    # R5 (rule 4c): the name is a placeholder until the model's row fills it in
+    if hidden == "new_category":
+        return label(category="NEW_CATEGORY", status="new", needs_human=True, confidence={"min": 0.5, "max": 0.69})
+
+    # R3 (rule 4b)
+    return label(category=hidden, status="approved", needs_human=False, confidence={"min": 0.8})
 
 
 if __name__ == "__main__":
