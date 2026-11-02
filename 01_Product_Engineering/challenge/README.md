@@ -1009,10 +1009,9 @@ imagining how it would go.
 
 **Ask three things, in this order:**
 
-1. *"What would you use this for?"* — before you tell them what it is for.
-2. *"What is missing before you would actually use it?"*
-3. *"What would you expect it to cost?"* — and compare their answer with
-   your own arithmetic in Step 13.
+1. *"What would you use this for?"* In prioritizing automation (and agentic use cases) based on actual data, potentially optimizing our efforts spent trying to reduce toil and have the largest impacts with our automation/AI efforts.
+2. *"What is missing before you would actually use it?"* I definitely think having the tool be able to help define the taxonomy is going to be very valuable. For the longer term, I think it might be possible to also map the categories in the taxonomy to our actual tooling ecosystem so that we could see how well our tools line up with our needs, what tools need the most investment, and where the most serious gaps are.
+3. *"What would you expect it to cost?"* Should just cost engineering hours and whatever token spend we have if we go to a non-local LLM, but it should be well within the acceptable range given our incident volume.
 
 The first answer is usually not the one you designed for, and that gap is the
 most valuable thing you will learn this week.
@@ -1091,7 +1090,7 @@ build against it — measuring it afterwards is a different, weaker thing.
 
 ## Bring it to work
 
-DRAFT. Edit every `EDIT` value. Measured numbers are from two real calls through the endpoint on my laptop (qwen3.5:9b through Ollama); looked-up and estimated numbers are marked.
+Measured numbers are from two real calls through the endpoint on my laptop (qwen3.5:9b through Ollama); looked-up and estimated numbers are marked.
 
 ```
 cost per call   = tokens_in / 1e6 × $_per_1M_in  +  tokens_out / 1e6 × $_per_1M_out
@@ -1105,12 +1104,21 @@ ratio           = human per year / model per year
 | tokens in | 2,509 (INC-0001), 2,296 (INC-0005) | **measured** |
 | tokens out | 2,219 (INC-0001), 5,698 (INC-0005). Server-reported completion tokens, which for this model likely include its reasoning | **measured** |
 | time per call | 88 s (INC-0001), 202 s (INC-0005) | **measured**, two calls, local hardware |
-| $ per 1M tokens in / out | EDIT: local model, so no per-token price. For a hosted comparison, EDIT: price from the provider page | **looked up** |
+| $ per 1M tokens in / out | Gemini 2.5 Flash $0.30 / $2.50; Gemini 2.5 Pro $1.25 / $10.00. The firm-wide subscription ($8,000/month, includes API access) is already paid, so this tool adds ~$0 to the bill; per-token prices are shown as the equivalent cost | **looked up, not verified** against the provider page |
 | calls per day | 25 (every incident is classified) | charter estimate, from the form |
-| minutes per pass | EDIT: nobody has timed one. The charter's ~990 h/yr of grouping, review and reporting over 25 × 250 incidents is about 9.5 min per incident, but that also covers review and reporting, so treat it as an upper bound | **looked up** until timed |
-| loaded $/hour | EDIT | **looked up** |
+| minutes per pass | 9.5. Nobody has timed one: the charter's ~990 h/yr of grouping, review and reporting over 25 × 250 incidents. That also covers review and reporting, so treat it as an upper bound | **looked up** until timed |
+| loaded $/hour | $40.38 base ($7,000/month × 12 ÷ 2,080 h); $52.50 loaded (1.3× base) | **looked up**; the 1.3× multiplier is **assumed** |
 
-Cost per call, model per year, human per year and ratio: EDIT once the rows above are final.
+Averages used: 2,403 tokens in and 3,959 out per call; 6,250 calls a year.
+
+| | Gemini 2.5 Flash | Gemini 2.5 Pro |
+| --- | ---: | ---: |
+| cost per call | $0.0106 | $0.0426 |
+| model per year | $66 | $266 |
+| human per year (base / loaded) | $39,980 / $51,980 | $39,980 / $51,980 |
+| ratio (base / loaded) | ~600× / ~780× | ~150× / ~195× |
+
+The ratio is an upper bound, because the 9.5 minutes also covers review and reporting that the endpoint does not replace. Build hours and reviewer time on `needs_human` cases are not included.
 
 **p95 latency target:** EDIT. For reference, the measured calls took 88 s and 202 s. At about 145 s per call, the 290-incident backfill would take about 12 hours.
 

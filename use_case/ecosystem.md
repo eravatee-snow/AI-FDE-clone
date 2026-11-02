@@ -29,7 +29,7 @@ Principal Software Engineer of my team
 | 5 | Can the app reach the internet? Egress proxy? Allowlist? | yes to all, but I will be using a local LLM model for now |
 | 6 | Where do secrets come from? (Vault, Secrets Manager, Key Vault) | key vault, called snccredential |
 | 7 | Who approves a deployment, and what review does it need? | There is a comprehensive process in place, where a team of architects will decide based on my proposal is sound enough, if I have architected all aspects of this solution correctly. They might suggest changes to the solution, or request additional information. But, I can deploy to the lab environment without any restrictions, that is where I will be starting my development. |
-| 8 | Is there an approved internal LLM endpoint already? | no, for now, I am using a local LLM model. |
+| 8 | Is there an approved internal LLM endpoint already? | There is one. But for now, I am using a local LLM model. |
 
 **What surprised you?**
 

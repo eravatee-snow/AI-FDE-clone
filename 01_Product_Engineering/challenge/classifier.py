@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 import llm
-from schema import SingleIntRequest, SingleIntResponse
+from schema import CategoryStatus, SingleIntRequest, SingleIntResponse
 from incidents import get_incident
 from pydantic import ValidationError
  
@@ -64,20 +64,41 @@ def build_system_prompt(taxonomy: dict) -> str:
         + json.dumps(SingleIntResponse.model_json_schema(), indent=2) + "\n"
     )
  
+AUTO_DECIDE_MIN = 0.8  # rule 7a: only "cause established + clear category match" skips review
+
+
+def apply_review_policy(response: SingleIntResponse, taxonomy: dict) -> SingleIntResponse:
+    """Code, not the model, decides whether a person looks. Keeps the model's
+    suggestion but sends it for review when the name is not in the taxonomy or
+    the confidence is below the auto-decision line."""
+    known = {c["name"] for c in taxonomy["categories"]} | {taxonomy["not_toil"]["name"]}
+    update, why = {}, []
+    if response.category_status is CategoryStatus.approved and response.suggested_category not in known:
+        update["category_status"] = CategoryStatus.new  # an invented name is a new suggestion
+        why.append(f"'{response.suggested_category}' is not in the taxonomy")
+    if not response.needs_human and response.confidence < AUTO_DECIDE_MIN:
+        why.append(f"confidence {response.confidence} is below {AUTO_DECIDE_MIN}")
+    if why:
+        update["needs_human"] = True
+        update["reason"] = f"{response.reason} [Sent for review: {'; '.join(why)}.]"
+    return response.model_copy(update=update)
+
+
 def build_user_message(incident: dict) -> str:
     """The evidence the model sees: the incident as JSON text."""
     return json.dumps(incident, indent=2)
  
 def classify_incident(incident_id: str) -> SingleIntResponse:
     incident = get_incident(incident_id)          # raises KeyError if unknown
+    taxonomy = load_taxonomy()
     messages = [
-        {"role": "system", "content": build_system_prompt(load_taxonomy())},
+        {"role": "system", "content": build_system_prompt(taxonomy)},
         {"role": "user", "content": build_user_message(incident)},
     ]
     for attempt in range(2):
         raw = llm.complete_json(llm.MODEL, messages)
         try:
-            return SingleIntResponse.model_validate_json(raw)
+            return apply_review_policy(SingleIntResponse.model_validate_json(raw), taxonomy)
         except ValidationError as e:
             if attempt == 1:
                 raise
