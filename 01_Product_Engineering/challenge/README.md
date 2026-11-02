@@ -948,7 +948,7 @@ Each prompt is a golden incident ID sent through `solve_single` (the same code p
 **Prompt:** `INC-0005` (GS-05, the decline: intermittent, no cause identified) **Result:** no category, `unclassified`, `needs_human` true, confidence 0.25. Matches on category, status, `needs_human` and confidence. It fails the reason check: the reason says "cause not established", and my golden's keyword list has "not identified" but not "not established".
 
 **❓ Does it behave the way you expected? Why or why not?**
-DRAFT, edit it. On the structured fields it did what I expected on all five, including the two hard ones: it proposed a new category for the certificate incident, and it declined to guess on the intermittent one. The one miss is a wording miss, not a wrong answer. It shows that the keyword check in my golden is too narrow, so I should accept more phrasings, or score the reason with a judge in Week 4.
+On the structured fields it did what I expected on all five, including the two hard ones: it proposed a new category for the certificate incident, and it declined to guess on the intermittent one. The one miss is a wording miss, not a wrong answer. It shows that the keyword check in my golden is too narrow, so I should accept more phrasings, or score the reason with a judge in Week 4.
 
 Three reasons not to read five out of five as proof:
 - **The goldens were used to tune the prompt.** Before I rewrote the prompt and the `change_induced_errors` description in `taxonomy.json`, GS-04 came back as `change_induced_errors` with no human review, and GS-05 crashed on invalid JSON. The model's reason for GS-04 now quotes my taxonomy exclusion, so these five are cases the prompt was shaped to pass.
@@ -1120,14 +1120,14 @@ Averages used: 2,403 tokens in and 3,959 out per call; 6,250 calls a year.
 
 The ratio is an upper bound, because the 9.5 minutes also covers review and reporting that the endpoint does not replace. Build hours and reviewer time on `needs_human` cases are not included.
 
-**p95 latency target:** EDIT. For reference, the measured calls took 88 s and 202 s. At about 145 s per call, the 290-incident backfill would take about 12 hours.
+**p95 latency target:** Latency target is to give the result under 5 min. 
 
-**Cost or latency, which is more likely to stop this being used?** EDIT.
+**Cost or latency, which is more likely to stop this being used?** None in single incident classification, except for an occasional backfill run which will take longer than 5 min, but that should be okay given the volume of data.
 
 **What I would swap to run this at work:**
-- **Data:** EDIT (which real inputs the five goldens stand in for).
-- **Model or endpoint:** EDIT (there is no approved internal endpoint yet, so what would change the price or the speed).
-- **Access or approval:** EDIT (what I would need to ask for).
+- **Data:** The real data will be different from the goldens, but the structure will be aligned with our internal incident shape. 
+- **Model or endpoint:** In production this will be a hosted Gemini endpoint with a proper gateway.
+- **Access or approval:** Access to the gemini endpoint, but that will not be an issue, there is a process in place to get approval once a project is approved for production use.
 
 ---
 
