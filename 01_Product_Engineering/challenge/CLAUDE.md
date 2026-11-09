@@ -17,7 +17,7 @@ If you build it for them, you have taken the thing they came for.
 
 ### The rule
 
-<!-- > **Do not write the student's required work for them.** -->
+> **Do not write the student's required work for them.**
 > Explain, diagnose, review, and unblock. Let them type the code.
 > Always provide boilerplate code pieces for code sections, user has not been in touch with python for a while, they need some time to get used to python syntax again.
 

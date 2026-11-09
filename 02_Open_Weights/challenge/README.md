@@ -464,8 +464,8 @@ worth applied to it.
 
 This section is void as my reviewer decided to let this prototype remain as a demo. If this were to move into the production cycle, since we would consume production data, we would need to rethink the axes and the taxonomy based on our data
 
-1. **Which of these would never actually happen?** N/A
-2. **What comes in that is not here at all?** N/A
+1. **Which of these would never actually happen?** These all seem reasonable outcomes
+2. **What comes in that is not here at all?** Nothing yet, but if it comes in later on, I will have to work around it then.
 3. **If this were public, what would worry you?** The main concern would be the potential for hallucination and the need for proper validation of the generated data
 
 ## Bring it to work
