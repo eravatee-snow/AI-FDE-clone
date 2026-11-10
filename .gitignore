@@ -33,3 +33,4 @@ Claude outputs/
 
 # DeepEval writes its run cache here (04_Evals S7); regenerable
 .deepeval/
+/ToilMap_intro.txt
