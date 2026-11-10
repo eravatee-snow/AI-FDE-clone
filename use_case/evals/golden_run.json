@@ -1,0 +1,72 @@
+{
+  "model": "ollama/qwen3.5:9b",
+  "commit": "edb719e",
+  "ran_at": "2026-11-10T08:29:48+00:00",
+  "results": [
+    {
+      "id": "GS-01",
+      "output": {
+        "suggested_category": "change_induced_errors",
+        "category_status": "approved",
+        "problem_id": null,
+        "needs_human": false,
+        "confidence": 0.95,
+        "reason": "The incident cause was explicitly established as a configuration change that linked prefixes to a non-production topology, triggering an automation withdrawal of routes. This matches the definition of 'change_induced_errors' (incident traced to a change made or executed incorrectly - bad config push), where the outage began after a change/update triggered a global refresh."
+      },
+      "error": null,
+      "seconds": 137.3
+    },
+    {
+      "id": "GS-02",
+      "output": {
+        "suggested_category": "not_toil",
+        "category_status": "approved",
+        "problem_id": null,
+        "needs_human": false,
+        "confidence": 1.0,
+        "reason": "The incident cause is explicitly established as 'Planned, announced maintenance' on the exchange operator's secondary route server. Work notes confirm this aligns with a maintenance notice received a week in advance. Per the definition of not_toil, this qualifies as a planned, expected event with no recurring pattern or unexpected failure."
+      },
+      "error": null,
+      "seconds": 64.4
+    },
+    {
+      "id": "GS-03",
+      "output": {
+        "suggested_category": "hardware_failure",
+        "category_status": "approved",
+        "problem_id": null,
+        "needs_human": true,
+        "confidence": 0.45,
+        "reason": "The resolution notes explicitly state that root cause is not established (confirmed_cause: null) and vendor investigation ended without confirmation. However, work notes consistently identify a suspected switch-fabric/hardware issue, resolved by rebooting the core switch, aligning with a leading hypothesis for hardware_failure under Rule 5a."
+      },
+      "error": null,
+      "seconds": 208.4
+    },
+    {
+      "id": "GS-04",
+      "output": {
+        "suggested_category": "certificate_expiry",
+        "category_status": "new",
+        "problem_id": null,
+        "needs_human": true,
+        "confidence": 0.6,
+        "reason": "The cause is established as service certificate expiry due to a process gap in monitoring and deployment procedures (procedures broke down, renewal not deployed before expiry). While this involves a configuration update, the specific trigger was a lapse/expiration ('running out'), which is explicitly excluded from the 'change_induced_errors' definition rule stating it does not apply when the trigger is something lapsing. No other existing category (hardware, routing, security, etc.) fits the nature of the incident. Therefore, a new category is required to capture certificate management lapses."
+      },
+      "error": null,
+      "seconds": 348.2
+    },
+    {
+      "id": "GS-05",
+      "output": {
+        "suggested_category": null,
+        "category_status": "unclassified",
+        "problem_id": null,
+        "needs_human": true,
+        "confidence": 0.2,
+        "reason": "Cause not established: confirmed_cause is null in resolution. Work notes indicate no specific pattern found across wired/wireless locations and interfaces showed nothing abnormal. The issue recovered spontaneously without intervention multiple times, contradicting a stable hardware or configuration failure hypothesis. No leading hypothesis exists to assign an existing category."
+      },
+      "error": null,
+      "seconds": 74.3
+    }
+  ]
+}
