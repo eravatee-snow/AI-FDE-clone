@@ -19,7 +19,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv export --frozen --no-dev --no-emit-project -o requirements.txt \
  && uv pip install --system --no-cache -r requirements.txt
 
-COPY llm.py app.py classifier.py schema.py incidents.py ./
+COPY llm.py app.py classifier.py schema.py incidents.py utcp.py ./
 COPY frontend/ ./frontend/
 
 # taxonomy.json and golden.jsonl live in use_case/ at the repo root, outside

@@ -94,8 +94,8 @@ def stream_reply(message: str, history: list[dict] | None = None):
             yield reply
 
 
-def complete_json(model: str, messages: json) -> str:
-    """One non-streaming call; return the reply text."""
+def call_kwargs(model: str, messages: list[dict]) -> dict:
+    """Settings for one non-streaming call. Shared so every path sends the same ones."""
     kwargs = {"model": model, "messages": messages, "timeout": TIMEOUT}   # what else does the call need?
     if API_BASE:
         kwargs["api_base"] = API_BASE
@@ -103,5 +103,12 @@ def complete_json(model: str, messages: json) -> str:
         kwargs["extra_headers"] = EXTRA_HEADERS
     if LLM_NUM_CTX:
         kwargs["num_ctx"] = LLM_NUM_CTX
-    response = completion(**kwargs)
+    return kwargs
+
+
+def complete_json(model: str, messages: json, meter=None) -> str:
+    """One non-streaming call; return the reply text. `meter`, if given, sees the raw response."""
+    response = completion(**call_kwargs(model, messages))
+    if meter:
+        meter.track(response)
     return response.choices[0].message.content

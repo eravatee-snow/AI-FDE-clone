@@ -51,12 +51,12 @@ The output must be a JSON object that conforms to this JSON schema:
 """
 
 
-def build_system_prompt(taxonomy: dict) -> str:
+def build_system_prompt(taxonomy: dict, intro: str = _PROMPT_INTRO) -> str:
     """The policy. Built from the taxonomy file, never typed out by hand."""
     not_toil = taxonomy["not_toil"]
     categories = "\n".join(f"{c['name']}: {c['description']}" for c in taxonomy["categories"])
     return (
-        _PROMPT_INTRO
+        intro
         + f"{not_toil['name']}: {not_toil['description']}\n"
         + _PROMPT_BEFORE_CATEGORIES
         + categories + "\n"
@@ -88,15 +88,15 @@ def build_user_message(incident: dict) -> str:
     """The evidence the model sees: the incident as JSON text."""
     return json.dumps(incident, indent=2)
  
-def classify_incident(incident_id: str) -> SingleIntResponse:
-    incident = get_incident(incident_id)          # raises KeyError if unknown
+def classify_incident(incident_id: str, lookup=get_incident, meter=None) -> SingleIntResponse:
+    incident = lookup(incident_id)                # raises KeyError if unknown
     taxonomy = load_taxonomy()
     messages = [
         {"role": "system", "content": build_system_prompt(taxonomy)},
         {"role": "user", "content": build_user_message(incident)},
     ]
     for attempt in range(2):
-        raw = llm.complete_json(llm.MODEL, messages)
+        raw = llm.complete_json(llm.MODEL, messages, meter)
         try:
             return apply_review_policy(SingleIntResponse.model_validate_json(raw), taxonomy)
         except ValidationError as e:

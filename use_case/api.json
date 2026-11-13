@@ -1,0 +1,73 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Toil Map", "version": "1.0.0"},
+  "paths": {"/api/incidents/{incident_id}": {"get": {
+    "operationId": "get_incident",
+    "summary": "Get incident details by incident ID",
+    "parameters": [{"name": "incident_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+    "responses": {
+      "200": {
+        "description": "The incident details",
+        "content": {"application/json": {"schema": {
+          "type": "object",
+          "required": ["incident_id", "status", "opened_at", "resolved_at", "summary", "reported_symptoms",
+                       "affected_context", "work_notes", "resolution", "recorded_hands_on_minutes", "existing_links"],
+          "properties": {
+            "incident_id": {"type": "string", "description": "e.g. INC-0001 or INC-SYN-0001"},
+            "status": {"type": "string", "description": "e.g. resolved"},
+            "opened_at": {"type": "string", "format": "date-time"},
+            "resolved_at": {"type": "string", "format": "date-time"},
+            "summary": {"type": "string"},
+            "reported_symptoms": {"type": "string"},
+            "affected_context": {
+              "type": "object",
+              "properties": {
+                "service_id": {"type": "string"},
+                "site_id": {"type": "string"},
+                "component_id": {"type": "string"}
+              }
+            },
+            "work_notes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "recorded_at": {"type": "string", "format": "date-time"},
+                  "responder_id": {"type": "string"},
+                  "note": {"type": "string"}
+                }
+              }
+            },
+            "resolution": {
+              "type": "object",
+              "properties": {
+                "service_restored": {"type": ["boolean", "null"]},
+                "restoration_action": {"type": "string"},
+                "confirmed_cause": {"type": ["string", "null"], "description": "null when no cause was confirmed"},
+                "supporting_evidence": {"type": "array", "items": {"type": "string"}},
+                "remaining_uncertainty": {"type": ["string", "null"]},
+                "follow_up": {"type": ["string", "null"]}
+              }
+            },
+            "recorded_hands_on_minutes": {"type": ["integer", "null"]},
+            "existing_links": {
+              "type": "object",
+              "properties": {
+                "incident_ids": {"type": "array", "items": {"type": "string"}},
+                "problem_ids": {"type": "array", "items": {"type": "string"}},
+                "change_ids": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          }
+        }}}
+      },
+      "404": {
+        "description": "No incident with that ID",
+        "content": {"application/json": {"schema": {
+          "type": "object",
+          "properties": {"detail": {"type": "string"}}
+        }}}
+      }
+    }
+  }}}
+}

@@ -44,8 +44,13 @@ class SingleIntResponse(BaseModel):
 
         return self
  
+class BatchIntItem(SingleIntResponse):
+    """One classification inside a batch. The id is what ties a result to its incident; order is not trusted."""
+    incident_id: str = Field(description="The Id of the incident this classification is for")
+
+
 class BatchIntResponse(BaseModel):
-    classifications: list[SingleIntResponse] = Field(description="One result per incident processed")
+    classifications: list[BatchIntItem] = Field(description="One result per incident processed")
     # plus whatever batch-level summary fields you need
     
  

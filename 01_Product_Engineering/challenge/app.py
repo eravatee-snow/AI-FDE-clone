@@ -9,10 +9,12 @@ import json
 import os
 from pathlib import Path
 
+from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from gradio import Server
 
 from classifier import solve_single
+from incidents import get_incident
 from pydantic import ValidationError
 from schema import SingleIntRequest, SingleIntResponse
 
@@ -58,6 +60,20 @@ def classify_incident_endpoint(incident_id: str) -> str:
     except KeyError as e:
         return json.dumps({"error": f"incident not found: {e.args[0]}"})
     return response.model_dump_json()
+
+
+# --- Stand-in incident API ---------------------------------------------------
+# Plays the role of the firm's incident REST API for TC5's UTCP comparison:
+# one incident by number, as JSON, described in /openapi.json.
+
+
+@app.get("/api/incidents/{incident_id}", operation_id="get_incident", tags=["incidents"])
+def get_incident_route(incident_id: str) -> dict:
+    """Return one resolved network incident record by its ID, e.g. "INC-0005"."""
+    try:
+        return get_incident(incident_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"incident not found: {incident_id}")
 
 
 # --- The frontend ------------------------------------------------------------

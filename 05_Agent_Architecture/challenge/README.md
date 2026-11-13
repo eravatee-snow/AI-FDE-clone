@@ -10,6 +10,12 @@
 
 ---
 
+#### What changed after critique — my answer
+
+<!-- yours (Step 7): one paragraph. What the room and the stakeholder asked, and what changed in the demo because of it. -->
+
+---
+
 ## Overview
 
 > **Read first:** [`use_case/decisions.md`](../../use_case/decisions.md). This
@@ -199,6 +205,15 @@ you were asked. Then mark three of them:
    marked open, and any confusion ones marked as such.
 2. **One line per fair question** saying what you will change.
 
+#### Step 1 — my answers
+
+The questions and their marks are in [`use_case/decisions.md`](../../use_case/decisions.md), *Week 5 — what the room asked*.
+
+- **Fair, Q8 — What is the baseline? Better than what?** The best way to define a baseline would be to compare how much time it takes for a person to look at an incident and categorize it vs how much time it takes for ToilMap to do the same.
+- **Fair, Q14 — Which part would you have to rewrite to deploy where you work?** `get_incident` moves to the incident REST API with ToilMap's own service account; the model moves from local Ollama to a hosted API or gateway; `use_case/` becomes a ConfigMap or volume on the internal k8s platform; the taxonomy is revised against production data; backfill is designed for production volume.
+- **Open, Q2 — Have you shown this to them? What did they say?** Not yet. The requirements come from problems the reliability engineers raised with my principal engineer; I will present the MVP to them and collect feedback.
+- **Confusion, Q4 — Is this the biggest problem they have, or the one easiest to build for?** This is not the biggest problem they have, but it will help manage the work load better and reduce the manual effort required. It is one step towards resolving the problem they are facing
+
 ---
 
 ## Step 2 — Pick the second-best way, and say why
@@ -234,6 +249,13 @@ your second-best way. Write down the reason it is second best.
 2. **The closest alternative you did *not* pick**, and why. This becomes the
    *rejected* field in Step 6.
 
+#### Step 2 — my answers
+
+- **Second way:** I have decided to go ahead with UTCP, as there is an existing HTTP API at work for incident lookup.
+- **Closest alternative not picked:** Agent Skill - The taxonomy is already defined as a json and is loaded with each model call
+
+Full reasoning: [`use_case/decisions.md`](../../use_case/decisions.md), *Week 5 draft*.
+
 ---
 
 ## Step 3 — Build it
@@ -267,6 +289,17 @@ anything.
    first.
 2. **Its dispatcher handling an unknown tool name and malformed arguments as
    messages**, with one line in your README showing what the model gets back.
+
+#### Step 3 — my answers
+
+Implementation: [`utcp.py`](../../01_Product_Engineering/challenge/utcp.py) (`call_with_utcp`), over the stand-in incident API described by `use_case/api.json`.
+
+`dispatch()` never raises: an unknown tool name comes back to the model as an error that lists the available tools, and arguments that are not valid JSON come back as the parse error, so the model can correct the call instead of the process crashing.
+
+| Case | Sent to `dispatch()` | What the model gets back |
+| --- | --- | --- |
+| Unknown tool name | `get_incidnet` | `Unknown tool: 'get_incidnet'. Available tools: get_incident` |
+| Malformed arguments | `{incident_id: INC-0001` | `arguments were not a JSON object: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)` |
 
 ---
 
@@ -305,6 +338,30 @@ your model and its server, and your decision row should say which.
 2. **One line** on whether your model emitted parallel tool calls, with the
    count from `len(msg.tool_calls)` on the first turn.
 
+#### Step 4 — my answers
+
+Measured with [`test.py`](../../01_Product_Engineering/challenge/test.py), model `ollama_chat/qwen3.5:9b` (native tool calling), commit `3e1fa3e-dirty`. One run each, temperature 1. Runs produced by `run_tc5.sh`; the logs are kept locally and not committed.
+
+| Implementation | Request | Model calls | Capability calls | Seconds | Tokens |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Baseline (one prompt) | Single: INC-0001 | 1 | 1 | 108.9 | 5,317 |
+| Baseline (one prompt) | Several: INC-0001, INC-0002, INC-0005, one call each in a code loop | 3 | 3 | 334.4 | 17,078 |
+| UTCP | Single: INC-0001 | 2 | 1 | 30.3 | 5,196 |
+| UTCP | Several: INC-0001, INC-0002, INC-0005, one conversation each in a code loop | 7 | 4 | 97.5 | 19,278 |
+| UTCP | Several: INC-0001, INC-0002, INC-0005, all in one conversation | 3 | 6 | 69.7 | 14,700 |
+
+Same runs on `ollama/qwen3.5:9b` (emulated tool calling):
+
+| Implementation | Request | Model calls | Capability calls | Seconds | Tokens |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Baseline (one prompt) | Single: INC-0001 | 1 | 1 | 129.3 | 6,424 |
+| Baseline (one prompt) | Several: code loop | 3 | 3 | 253.5 | 15,220 |
+| UTCP | Single: INC-0001 | 2 | 1 | 210.9 | 10,427 |
+| UTCP | Several: code loop | 5 | 2 | 687.4 | 30,070 |
+| UTCP | Several: one conversation | 2 | 1 | 661.3 | 23,236 |
+
+**Parallel tool calls:** The native run made 3 parallel tool calls. But the best case was supposed to be 2 runs not 3 - it took 3 because the second round repeated the first lookup. This created an unnecessary round trip. On the emulated path (`ollama/`), the first turn made only 1 tool call: it fetched INC-0001 and never fetched the other two, so there were no parallel calls
+
 ---
 
 ## Step 5 — Measure again at your real response size
@@ -341,6 +398,17 @@ Then put them next to the sweep's curve. Here is how each way's cost behaves:
 1. **The real-size row** in your README: bytes per response, calls per
    request, tokens for each implementation, marked *measured*.
 2. **One sentence** on what that number does at 10× your current volume.
+
+#### Step 5 — my answers
+
+| Implementation | Bytes per response | Capability calls per request | Tokens |
+| --- | ---: | ---: | ---: |
+| Baseline (one prompt) | 3,577 (record as `json.dumps(indent=2)` in the user message) | 1 | 5,317 |
+| UTCP | 3,285 (record as compact JSON from the incident API) | 1 | 5,196 |
+
+All *measured* on INC-0001, the largest of the three test incidents (INC-0002: 2,474 / 2,250 bytes; INC-0005: 2,339 / 2,083). Bytes from `build_user_message` and `json.dumps` over `get_incident`; tokens from the native `ollama_chat/` single run in Step 4. The stand-in API already returns the whole record, so this is the same size as Step 4, not a larger one. The size of a real ServiceNow incident with its work notes is *not measured*.
+
+**At 10× volume:** At 10× the two-year backfill (about 182,500 incidents instead of 18,250), the baseline costs about 1.04 billion tokens (5,693 per incident, from the three-incident run) against about 1.17 billion for UTCP in a code loop (6,426 per incident) and about 243,000 incident-API calls instead of 182,500 (4 fetches per 3 incidents), while sequential classification at ~167 s per call (the local `qwen3.5:9b` on a laptop) would take about 350 days, so throughput, not architecture, is still the first thing to fix. A commercially hosted model with concurrent calls is *expected* to cut that time sharply, bounded by the firm's rate limits, but is *not measured*. *Measured:* tokens and calls per incident (one run each). *Calculated:* everything at 10×.
 
 ---
 
@@ -391,6 +459,15 @@ is still no, write that down as your decision.
    cited in *why*.
 2. **The open question from Step 1, answered**, or the row says plainly why
    it is still open and what would close it.
+
+#### Step 6 — my answers
+
+The architecture row is in [`use_case/decisions.md`](../../use_case/decisions.md), Week 5.
+
+- **Decision:** I am keeping none of the 6, as there is nothing for the model to decide the way the current design works
+- **Rejected:** The strongest reject was for UTCP, as it added unnecessary complexity and round trips. It is easier to abstract the incident lookup logic in the backend.
+- **Switch condition:** If the reliability engineers requested a new feature that requires the model to look at incidents and fetch those with similar descriptions, then I would need to give the model independent access over UTCP to the existing REST API because it would then have to decide what to fetch. This is not something code can do because the user will pass an incident to the model, then expecting it to look for a result later on
+- **Open question from Step 1:** I have not shown this to reliability engineers yet, I will present the MVP to them. The current requirements are based on the problems they have voiced to my principal engineer. Once I have a sample to present, I will collect more feedback for more features that they might like to see in this application. I have a conversation scheduled with a reliability engineer.
 
 ---
 
@@ -490,6 +567,12 @@ counts. Imagining how it would go does not.
 3. **What changed after critique**, in one paragraph at the top of your
    README, so a reader can see the demo absorbed it.
 
+#### Step 7 — my answers
+
+- **Shown to:** my principal software engineer — row in [`use_case/stakeholders.md`](../../use_case/stakeholders.md)
+- **What their questions changed:** — line in [`use_case/decisions.md`](../../use_case/decisions.md)
+- **What changed after critique:** paragraph at the top of this README.
+
 ---
 
 ## 📤 Step 8 — Share: bring it to work
@@ -522,6 +605,16 @@ This step is where you write down which one.
    turn the comparison into the version your team could run.
 3. **Your repo link posted in [our community on Maven](https://bit.ly/fde1-maven-community)**,
    and comments on at least two other students' submissions after the deadline.
+
+## Bring it to work
+
+**Capability:** get_incident - runs an incident lookup based on incident ID and returns the incident attached to the given ID
+
+**What I would swap:**
+
+- **Data:** 3,285 bytes per response (INC-0001 from the stand-in API; a real ServiceNow record is *not measured*), 1 call per request (Step 5 tokens: 5,317, *measured*). I would swap the synthetic data with actual production incidents internal to my team.
+- **Model or endpoint:** The capability already exists and provides for a way to be accessed using a service account that my team holds and I know how to consume it.
+- **Access or approval:** I would need to ask for space on a VM to test the application
 
 ---
 
