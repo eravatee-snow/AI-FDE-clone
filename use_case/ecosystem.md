@@ -27,7 +27,7 @@ Principal Software Engineer of my team
 | 3 | Is there an internal container registry? | yes |
 | 4 | How do users log in? (Okta, Entra ID, Ping, SAML, homegrown) | homegrown, SAML based LDAP or OAuth based LDAP |
 | 5 | Can the app reach the internet? Egress proxy? Allowlist? | yes to all, but I will be using a local LLM model for now |
-| 6 | Where do secrets come from? (Vault, Secrets Manager, Key Vault) | key vault, called snccredential |
+| 6 | Where do secrets come from? (Vault, Secrets Manager, Key Vault) | internal key vault |
 | 7 | Who approves a deployment, and what review does it need? | There is a comprehensive process in place, where a team of architects will decide based on my proposal is sound enough, if I have architected all aspects of this solution correctly. They might suggest changes to the solution, or request additional information. But, I can deploy to the lab environment without any restrictions, that is where I will be starting my development. |
 | 8 | Is there an approved internal LLM endpoint already? | There is one. But for now, I am using a local LLM model. |
 
@@ -66,6 +66,12 @@ Local model is not a plausible dpeloyment path for my firm, we would prefer to u
 
 **Publishing constraint:** internal system names may not appear in public material, so this repo describes systems by type and owner only.
 My internal stakeholders major concern is data leak risks, so I will use a locally hosted model for this demo.
+
+---
+
+## Week 5 — the model endpoint depends on where the app runs
+
+**Measured (TC5 Docker check):** inside the container, `LLM_API_BASE=http://localhost:11434` points at the container itself, so classification cannot reach Ollama on the host. Overriding it with `-e LLM_API_BASE=http://host.docker.internal:11434` at `docker run` fixed it (Docker Desktop on a Mac; Linux also needs `--add-host=host.docker.internal:host-gateway`). The endpoint is configuration, not code, so in the lab or production `LLM_API_BASE` becomes the approved internal LLM endpoint (Q8 above) and this override goes away.
 
 ---
 

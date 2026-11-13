@@ -614,6 +614,16 @@ Open <http://localhost:7860> again. Same app, now in a container.
 > it on its own: outside Docker the app picks the file up from the repository
 > tree, and inside there is no tree, so the key has to be handed in explicitly.
 
+**How I run ToilMap in Docker** (checked in TC5). The app needs `use_case/` mounted for the taxonomy and incidents, and a model endpoint the container can reach: inside a container `localhost` is the container itself, so Ollama on the host is `host.docker.internal` (Docker Desktop; on Linux add `--add-host=host.docker.internal:host-gateway`).
+
+```bash
+docker build -t enterprise-fde-challenge .
+docker run -p 7860:7860 --env-file ../../.env \
+  -e LLM_API_BASE=http://host.docker.internal:11434 \
+  -v "$(cd ../../use_case && pwd)":/app/use_case \
+  enterprise-fde-challenge
+```
+
 ### Four choices you will be asked to defend
 
 Read [`Dockerfile`](./Dockerfile) properly before you build. Every line is
