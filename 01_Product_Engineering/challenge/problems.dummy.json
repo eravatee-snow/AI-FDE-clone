@@ -1,0 +1,21 @@
+{
+  "_comment": "Dummy PRB fixtures for prompt testing only. Replaced by the synthetic problem records generated in a later week. Causes are deliberately unrelated to every golden incident so no golden's expected problem_id changes.",
+  "problems": [
+    {
+      "problem_id": "PRB0000101",
+      "title": "Branch WAN circuits saturate during nightly backup window",
+      "status": "open",
+      "category": "capacity_congestion",
+      "description": "Recurring packet loss and slow application response on branch WAN links between 01:00 and 03:00 local time. Link utilization reaches 100 percent while backup jobs run and QoS does not protect interactive traffic. Remediation so far has been manually rescheduling jobs or temporarily raising the circuit bandwidth.",
+      "linked_incident_ids": []
+    },
+    {
+      "problem_id": "PRB0000102",
+      "title": "Edge closet UPS batteries fail under load during short utility outages",
+      "status": "open",
+      "category": "power_environmental",
+      "description": "Network equipment in edge closets loses power during brief utility interruptions because aging UPS batteries cannot carry the load. Devices reboot unplanned and recover without configuration loss. Fix is battery replacement, tracked per site by facilities.",
+      "linked_incident_ids": []
+    }
+  ]
+}

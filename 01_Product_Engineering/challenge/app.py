@@ -5,13 +5,18 @@ queueing, streaming, and MCP for free, but you bring your own frontend. That
 split is the point: the API is the product, the UI is disposable.
 """
 
+import json
 import os
 from pathlib import Path
 
+from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from gradio import Server
 
-from llm import stream_reply
+from classifier import solve_single
+from incidents import get_incident
+from pydantic import ValidationError
+from schema import SingleIntRequest, SingleIntResponse
 
 app = Server()
 
@@ -23,10 +28,52 @@ FRONTEND = Path(__file__).parent / "frontend" / "index.html"
 # output components and silently returns nothing. Ask us how we know.
 
 
-@app.api(name="chat")
-def chat(message: str, history: list | None = None) -> str:
-    """Stream a reply to one user message."""
-    yield from stream_reply(message, history)
+@app.api(name="classify_incident")
+def classify_incident_endpoint(incident_id: str) -> str:
+    """Classify one resolved network incident into a toil category.
+
+    Args:
+        incident_id: The incident ID to look up, e.g. "INC-0005". Send the ID,
+            not the incident text.
+
+    Returns:
+        A JSON string. On success: suggested_category (an approved taxonomy
+        category, "not_toil", or a newly proposed name; null when no category
+        applies), category_status ("approved", "new" or "unclassified"),
+        needs_human, confidence (0 to 1), and reason. needs_human is false only
+        for a confident approved category or not_toil. It is true for a newly
+        proposed category, a low-confidence leading hypothesis, or no answer,
+        and a person must review those. If the model output stays invalid
+        after one retry, a needs_human=true response is returned. If the ID is
+        empty or unknown, the result is {"error": "..."}.
+    """
+    try:
+        response = solve_single(SingleIntRequest(incident_id=incident_id))
+    except ValidationError:
+        return SingleIntResponse(
+            needs_human=True,
+            confidence=0,
+            reason="Classification failed: model output was invalid after a retry. Route to human review.",
+        ).model_dump_json()
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+    except KeyError as e:
+        return json.dumps({"error": f"incident not found: {e.args[0]}"})
+    return response.model_dump_json()
+
+
+# --- Stand-in incident API ---------------------------------------------------
+# Plays the role of the firm's incident REST API for TC5's UTCP comparison:
+# one incident by number, as JSON, described in /openapi.json.
+
+
+@app.get("/api/incidents/{incident_id}", operation_id="get_incident", tags=["incidents"])
+def get_incident_route(incident_id: str) -> dict:
+    """Return one resolved network incident record by its ID, e.g. "INC-0005"."""
+    try:
+        return get_incident(incident_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"incident not found: {incident_id}")
 
 
 # --- The frontend ------------------------------------------------------------

@@ -4,43 +4,61 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Rename this. It is your app. -->
-    <title>Your AI Application</title>
+    <title>ToilMap</title>
     <style>
       body {
         font-family: system-ui, sans-serif;
-        max-width: 44rem;
+        max-width: 60rem;
         margin: 2rem auto;
         padding: 0 1rem;
         line-height: 1.5;
       }
-      #log {
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        padding: 1rem;
-        min-height: 20rem;
-        margin-bottom: 1rem;
-        white-space: pre-wrap;
-        overflow-y: auto;
-      }
-      .turn { margin-bottom: 1rem; }
-      .who { font-weight: 600; }
       form { display: flex; gap: 0.5rem; }
       input { flex: 1; padding: 0.5rem; font: inherit; }
       button { padding: 0.5rem 1rem; font: inherit; }
+      #message { margin: 1rem 0; min-height: 1.5rem; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+      th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; vertical-align: top; }
+      th { background: #f5f5f5; }
+      tr.detail td { color: #444; background: #fafafa; }
+      .reason { white-space: pre-wrap; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+      .reason.open { display: block; overflow: visible; }
+      .toggle { background: none; border: none; color: #0b57d0; padding: 0; margin-top: 0.25rem; cursor: pointer; }
+      .num { text-align: right; }
+      .subtitle { color: #555; margin: 0 0 1.5rem; }
+      td button { padding: 0.25rem 0.75rem; margin-right: 0.25rem; }
+      .badge { padding: 0.1rem 0.5rem; border-radius: 4px; font-weight: 600; }
+      .review { background: #ffe9c7; }
+      .auto { background: #dff3df; }
+      .approved { color: #1a7f1a; font-weight: 600; }
+      .rejected { color: #b00020; font-weight: 600; }
     </style>
   </head>
   <body>
-    <h1>Your AI Application</h1>
-    <p>
-      This is a deliberately plain frontend. Making it good is your job — open
-      this file in VS Code and point Claude Code at it.
+    <h1>ToilMap</h1>
+    <p class="subtitle">
+      Enter an incident ID to classify it into a toil category. Incidents flagged
+      for human review can be approved or rejected. Confidence is the model's own estimate.
     </p>
 
-    <div id="log"></div>
-    <form id="form">
-      <input id="input" placeholder="Ask something..." autocomplete="off" />
-      <button type="submit">Send</button>
+    <form id="incident-form">
+      <input id="incident-id" placeholder="Incident ID, e.g. INC-0005" autocomplete="off" />
+      <button type="submit">Classify incident</button>
     </form>
+    <div id="message"></div>
+    <table id="results" hidden>
+      <thead>
+        <tr>
+          <th>Incident</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th class="num">Confidence</th>
+          <th>Needs human</th>
+          <th>Human review</th>
+        </tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
 
     <script type="module">
       // NOTE: this loads the Gradio client from a public CDN. On a locked-down
@@ -50,47 +68,101 @@
       import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
 
       const client = await Client.connect(window.location.origin);
-      const log = document.getElementById("log");
-      const form = document.getElementById("form");
-      const input = document.getElementById("input");
+      const incidentForm = document.getElementById("incident-form");
+      const incidentId = document.getElementById("incident-id");
+      const message = document.getElementById("message");
+      const table = document.getElementById("results");
+      const tbody = document.getElementById("results-body");
 
-      // The model has no memory. This array is the entire conversation.
-      const history = [];
-
-      function addTurn(who, text) {
-        const div = document.createElement("div");
-        div.className = "turn";
-        div.innerHTML = `<span class="who">${who}:</span> `;
-        const span = document.createElement("span");
-        div.appendChild(span);
-        span.textContent = text;
-        log.appendChild(div);
-        log.scrollTop = log.scrollHeight;
-        return span;
+      // Model output is untrusted text: every cell is set with textContent, never innerHTML.
+      function cell(row, text) {
+        const td = row.insertCell();
+        td.textContent = text;
+        return td;
       }
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const message = input.value.trim();
-        if (!message) return;
-        input.value = "";
-
-        addTurn("You", message);
-        const out = addTurn("Assistant", "");
-
-        // submit() streams; each event carries the reply so far.
-        let reply = "";
-        const job = client.submit("/chat", { message, history });
-        for await (const event of job) {
-          if (event.type === "data") {
-            reply = event.data[0];
-            out.textContent = reply;
-            log.scrollTop = log.scrollHeight;
-          }
+      // Decisions live only in this page. Nothing is saved server-side yet.
+      function reviewCell(row, needsHuman) {
+        const td = row.insertCell();
+        if (!needsHuman) {
+          td.textContent = "Not required";
+          return;
         }
+        const buttons = [["Approve", "approved"], ["Reject", "rejected"]].map(([label, outcome]) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = label;
+          b.addEventListener("click", () => {
+            td.replaceChildren();
+            const status = document.createElement("span");
+            status.className = outcome;
+            status.textContent = outcome === "approved" ? "Approved" : "Rejected";
+            td.append(status);
+          });
+          return b;
+        });
+        td.append(...buttons);
+      }
 
-        history.push({ role: "user", content: message });
-        history.push({ role: "assistant", content: reply });
+      function addResult(id, data) {
+        const row = tbody.insertRow(0);
+        cell(row, id);
+        cell(row, data.suggested_category ?? "none");
+        cell(row, data.category_status);
+        cell(row, `${Math.round(data.confidence * 100)}%`).className = "num";
+        const human = cell(row, "");
+        const badge = document.createElement("span");
+        badge.className = `badge ${data.needs_human ? "review" : "auto"}`;
+        badge.textContent = data.needs_human ? "Yes" : "No";
+        human.append(badge);
+        reviewCell(row, data.needs_human);
+
+        const detail = tbody.insertRow(1);
+        detail.className = "detail";
+        const td = detail.insertCell();
+        td.colSpan = 6;
+        const reason = document.createElement("div");
+        reason.className = "reason";
+        reason.textContent = `Reason: ${data.reason}`;
+        td.append(reason);
+        table.hidden = false;
+
+        // Only offer the toggle when the text is actually clipped (needs the table visible to measure).
+        if (reason.scrollHeight > reason.clientHeight + 1) {
+          const toggle = document.createElement("button");
+          toggle.type = "button";
+          toggle.className = "toggle";
+          toggle.textContent = "Show more";
+          toggle.addEventListener("click", () => {
+            const open = reason.classList.toggle("open");
+            toggle.textContent = open ? "Show less" : "Show more";
+          });
+          td.append(toggle);
+        }
+      }
+
+      incidentForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = incidentId.value.trim();
+        if (!id) return;
+        const button = incidentForm.querySelector("button");
+        button.disabled = true;
+        message.textContent = "Classifying...";
+        try {
+          // The route is the name= from @app.api; the key is the Python argument name.
+          const result = await client.predict("/classify_incident", { incident_id: id });
+          const data = JSON.parse(result.data[0]);
+          if (data.error) {
+            message.textContent = `Error: ${data.error}`;
+          } else {
+            message.textContent = "";
+            addResult(id, data);
+          }
+        } catch (err) {
+          message.textContent = `Request failed: ${err.message ?? err}`;
+        } finally {
+          button.disabled = false;
+        }
       });
     </script>
   </body>

@@ -62,6 +62,24 @@ def test_kwargs_omits_api_base_when_unset(monkeypatch):
     assert "api_base" not in cfg.kwargs()
 
 
+def test_server_tools_opt_out_goes_only_to_unsloth(monkeypatch):
+    """Other providers reject `enable_tools`, so only an Unsloth key gets it."""
+    monkeypatch.setenv("VLM_MODEL", "openai/vision")
+    monkeypatch.setenv("VLM_API_BASE", "http://127.0.0.1:8890/v1")
+    monkeypatch.setenv("VLM_API_KEY", "sk-unsloth-abc")
+    monkeypatch.setenv("LLM_API_BASE", "http://127.0.0.1:8888/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-unsloth-def")
+    cfg = config.from_env(Path("/tmp"))
+    assert cfg.without_server_tools(cfg.vlm_kwargs())["extra_body"] == {"enable_tools": False}
+    assert cfg.without_server_tools(cfg.kwargs())["extra_body"] == {"enable_tools": False}
+
+    monkeypatch.setenv("VLM_API_KEY", "sk-proj-hosted")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-hosted")
+    cfg = config.from_env(Path("/tmp"))
+    assert "extra_body" not in cfg.without_server_tools(cfg.vlm_kwargs())
+    assert "extra_body" not in cfg.without_server_tools(cfg.kwargs())
+
+
 def test_bootstrap_names_the_missing_variable(monkeypatch, tmp_path):
     (tmp_path / "pyproject.toml").write_text("")
     (tmp_path / "helpers").mkdir()
@@ -904,6 +922,44 @@ def test_sdg_counts_a_dead_axis_combo_instead_of_losing_it(monkeypatch):
     assert report.failed_combos == 1        # the hole is visible
     assert report.unparseable == 0          # and not confused with bad JSON
     assert "combos failed" in str(report)
+
+
+def test_sdg_exclude_skips_impossible_combos_without_counting_them(monkeypatch):
+    """A combination removed on purpose is never sent, and is not a failure."""
+    prompts = []
+
+    def fake_chat(cfg, prompt, **kw):
+        prompts.append(prompt)
+        return '{"input": "a question", "output": "an answer"}'
+
+    monkeypatch.setattr("helpers.llm.chat", fake_chat)
+
+    _, report = sdg.generate(
+        _FakeCfg2(),
+        seeds=[{"input": "seed", "output": "out"}],
+        axes={"tone": ["terse", "verbose"], "topic": ["a", "b"]},
+        per_combo=1,
+        exclude=lambda combo: combo == {"tone": "terse", "topic": "b"},
+    )
+    assert len(prompts) == 3
+    assert not any("- tone: terse\n- topic: b" in p for p in prompts)
+    assert report.failed_combos == 0
+
+
+def test_sdg_row_text_stops_rows_without_input_from_all_looking_identical():
+    """Rows with no `input` field shingle to the same empty string and dedupe
+    to one row. `text` tells dedupe and leak_check where the content lives."""
+    rows = [{"incident": {"summary": "core switch line card failed"}},
+            {"incident": {"summary": "carrier fibre cut on the metro ring"}}]
+    as_text = lambda row: row["incident"]["summary"]
+
+    assert len(sdg.dedupe(rows)[0]) == 1                  # the silent failure
+    assert len(sdg.dedupe(rows, text=as_text)[0]) == 2
+
+    seeds = [{"incident": {"summary": "Outage at SITE-0042"}}]
+    leaked = [{"incident": {"summary": "again at SITE-0042"}}]
+    assert sdg.leak_check(seeds, leaked) == []            # a false all-clear
+    assert "SITE-0042" in sdg.leak_check(seeds, leaked, text=as_text)
 
 
 # ---------------------------------------------------------------------- memory
